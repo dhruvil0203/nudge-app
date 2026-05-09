@@ -7,6 +7,7 @@ import {
   Alert,
   SafeAreaView,
   Platform,
+  StatusBar,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
@@ -396,9 +397,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 18,
-    marginTop: 8,
+    paddingTop: 48,
+    paddingBottom: 16,
     borderBottomWidth: 1,
   },
   title: {

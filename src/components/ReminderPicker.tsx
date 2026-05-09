@@ -358,12 +358,14 @@ const styles = StyleSheet.create({
   },
   selectedDateTime: {
     fontSize: 14,
-    marginBottom: 16,
+    marginBottom: 40,
+    marginTop: 18,
     textAlign: "center",
   },
   datePickerButtons: {
     flexDirection: "row",
     gap: 8,
+    marginTop: 24,
   },
   datePickerButton: {
     flex: 1,
@@ -380,7 +382,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 20,
   },
   timeLabel: {
     fontSize: 15,

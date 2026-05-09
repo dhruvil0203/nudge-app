@@ -101,7 +101,7 @@ const AppContent = () => {
     <>
       <StatusBar
         barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor={theme.background}
+        backgroundColor={theme.cardBackground}
         translucent={false}
       />
       <NavigationContainer>
