@@ -22,7 +22,7 @@ if (N) {
 }
 
 export interface ReminderTime {
-  trigger: { seconds: number };
+  targetDate: Date;
   label: string;
 }
 
@@ -47,44 +47,26 @@ export const calculateReminderTime = (
 
   switch (reminderType) {
     case "in_1_minute": {
-      const inOneMinute = new Date(now.getTime() + 60 * 1000);
-      return {
-        trigger: {
-          seconds: Math.round((inOneMinute.getTime() - now.getTime()) / 1000),
-        },
-        label: "In 1 Minute",
-      };
+      const target = new Date(now.getTime() + 60 * 1000);
+      target.setSeconds(0, 0);
+      return { targetDate: target, label: "In 1 Minute" };
     }
     case "in_1_hour": {
-      const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
-      return {
-        trigger: {
-          seconds: Math.round((inOneHour.getTime() - now.getTime()) / 1000),
-        },
-        label: "In 1 Hour",
-      };
+      const target = new Date(now.getTime() + 60 * 60 * 1000);
+      target.setSeconds(0, 0);
+      return { targetDate: target, label: "In 1 Hour" };
     }
     case "tonight": {
-      const tonight = new Date(now);
-      tonight.setHours(20, 0, 0, 0);
-      if (tonight < now) tonight.setDate(tonight.getDate() + 1);
-      return {
-        trigger: {
-          seconds: Math.round((tonight.getTime() - now.getTime()) / 1000),
-        },
-        label: "Tonight at 8 PM",
-      };
+      const target = new Date(now);
+      target.setHours(20, 0, 0, 0);
+      if (target < now) target.setDate(target.getDate() + 1);
+      return { targetDate: target, label: "Tonight at 8 PM" };
     }
     case "tomorrow": {
-      const tomorrow = new Date(now);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(9, 0, 0, 0);
-      return {
-        trigger: {
-          seconds: Math.round((tomorrow.getTime() - now.getTime()) / 1000),
-        },
-        label: "Tomorrow at 9 AM",
-      };
+      const target = new Date(now);
+      target.setDate(target.getDate() + 1);
+      target.setHours(9, 0, 0, 0);
+      return { targetDate: target, label: "Tomorrow at 9 AM" };
     }
     default:
       return null;
@@ -100,15 +82,14 @@ export const scheduleReminder = async (
   if (!Notifications) return null;
 
   try {
-    let trigger: number;
-    const now = new Date();
+    let targetDate: Date;
 
     if (reminderType === "custom" && customTime) {
-      trigger = Math.round((customTime.getTime() - now.getTime()) / 1000);
+      targetDate = customTime;
     } else if (reminderType !== "no_reminder") {
       const reminderTime = calculateReminderTime(reminderType);
       if (!reminderTime) return null;
-      trigger = reminderTime.trigger.seconds;
+      targetDate = reminderTime.targetDate;
     } else {
       return null;
     }
@@ -116,13 +97,20 @@ export const scheduleReminder = async (
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
         title: "Nudge Reminder",
-        body: link.title || link.url,
+        body: "📌 You have a pending link to review!",
         data: { linkId: link.id.toString(), url: link.url },
         badge: 1,
       },
       trigger: {
-        type: "timeInterval",
-        seconds: Math.max(trigger, 1),
+        type: "calendar",
+        dateComponents: {
+          year: targetDate.getFullYear(),
+          month: targetDate.getMonth() + 1,
+          day: targetDate.getDate(),
+          hour: targetDate.getHours(),
+          minute: targetDate.getMinutes(),
+          second: 0,
+        },
         repeats: false,
       },
     });
@@ -155,7 +143,6 @@ export const scheduleWeeklyDigest = async (): Promise<void> => {
     const nextSunday = new Date(now);
     nextSunday.setDate(nextSunday.getDate() + daysUntilSunday);
     nextSunday.setHours(10, 0, 0, 0);
-    const trigger = Math.round((nextSunday.getTime() - now.getTime()) / 1000);
 
     let digestBody = "You have pending links waiting to be reviewed";
     try {
@@ -178,8 +165,15 @@ export const scheduleWeeklyDigest = async (): Promise<void> => {
         badge: 1,
       },
       trigger: {
-        type: "timeInterval",
-        seconds: Math.max(trigger, 1),
+        type: "calendar",
+        dateComponents: {
+          year: nextSunday.getFullYear(),
+          month: nextSunday.getMonth() + 1,
+          day: nextSunday.getDate(),
+          hour: 10,
+          minute: 0,
+          second: 0,
+        },
         repeats: false,
       },
     });
