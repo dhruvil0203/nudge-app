@@ -1,7 +1,3 @@
-/**
- * LinkStash Database Types and Interfaces
- */
-
 export interface Link {
   id: number;
   url: string;

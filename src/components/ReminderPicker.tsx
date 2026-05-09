@@ -38,6 +38,13 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
     REMINDER_OPTIONS.CUSTOM,
   ];
 
+  const clampToNow = (date: Date): Date => {
+    const now = new Date();
+    return date < now ? new Date(now) : date;
+  };
+
+  const isInPast = selectedDate <= new Date();
+
   const handleSelectReminder = (reminderType: string) => {
     if (reminderType === REMINDER_OPTIONS.CUSTOM) {
       const d = new Date();
@@ -59,6 +66,16 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
     } else {
       Alert.alert("Invalid Time", "Please select a time in the future.");
     }
+  };
+
+  const adjustDate = (unit: "day" | "hour" | "minute", direction: 1 | -1) => {
+    setSelectedDate((d) => {
+      const n = new Date(d);
+      if (unit === "day") n.setDate(n.getDate() + direction);
+      else if (unit === "hour") n.setHours(n.getHours() + direction);
+      else if (unit === "minute") n.setMinutes(n.getMinutes() + direction);
+      return clampToNow(n);
+    });
   };
 
   return (
@@ -133,24 +150,21 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
               </View>
 
               <Text
-                style={[styles.selectedDateTime, { color: theme.textSecondary }]}
+                style={[
+                  styles.selectedDateTime,
+                  { color: isInPast ? "#E53935" : theme.textSecondary },
+                ]}
               >
                 {selectedDate.toLocaleString()}
+                {isInPast ? "  ⚠️ Select a future time" : ""}
               </Text>
 
-              {/* Day controls */}
               <View style={styles.timeRow}>
                 <Text style={[styles.timeLabel, { color: theme.text }]}>Day</Text>
                 <View style={styles.timeControls}>
                   <TouchableOpacity
                     style={[styles.timeBtn, { backgroundColor: theme.primary }]}
-                    onPress={() =>
-                      setSelectedDate((d) => {
-                        const n = new Date(d);
-                        n.setDate(n.getDate() - 1);
-                        return n;
-                      })
-                    }
+                    onPress={() => adjustDate("day", -1)}
                   >
                     <Text style={styles.timeBtnText}>−</Text>
                   </TouchableOpacity>
@@ -162,32 +176,19 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                   </Text>
                   <TouchableOpacity
                     style={[styles.timeBtn, { backgroundColor: theme.primary }]}
-                    onPress={() =>
-                      setSelectedDate((d) => {
-                        const n = new Date(d);
-                        n.setDate(n.getDate() + 1);
-                        return n;
-                      })
-                    }
+                    onPress={() => adjustDate("day", 1)}
                   >
                     <Text style={styles.timeBtnText}>+</Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
-              {/* Hour controls */}
               <View style={styles.timeRow}>
                 <Text style={[styles.timeLabel, { color: theme.text }]}>Hour</Text>
                 <View style={styles.timeControls}>
                   <TouchableOpacity
                     style={[styles.timeBtn, { backgroundColor: theme.primary }]}
-                    onPress={() =>
-                      setSelectedDate((d) => {
-                        const n = new Date(d);
-                        n.setHours(n.getHours() - 1);
-                        return n;
-                      })
-                    }
+                    onPress={() => adjustDate("hour", -1)}
                   >
                     <Text style={styles.timeBtnText}>−</Text>
                   </TouchableOpacity>
@@ -196,32 +197,19 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                   </Text>
                   <TouchableOpacity
                     style={[styles.timeBtn, { backgroundColor: theme.primary }]}
-                    onPress={() =>
-                      setSelectedDate((d) => {
-                        const n = new Date(d);
-                        n.setHours(n.getHours() + 1);
-                        return n;
-                      })
-                    }
+                    onPress={() => adjustDate("hour", 1)}
                   >
                     <Text style={styles.timeBtnText}>+</Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
-              {/* Minute controls */}
               <View style={styles.timeRow}>
                 <Text style={[styles.timeLabel, { color: theme.text }]}>Minute</Text>
                 <View style={styles.timeControls}>
                   <TouchableOpacity
                     style={[styles.timeBtn, { backgroundColor: theme.primary }]}
-                    onPress={() =>
-                      setSelectedDate((d) => {
-                        const n = new Date(d);
-                        n.setMinutes(n.getMinutes() - 1);
-                        return n;
-                      })
-                    }
+                    onPress={() => adjustDate("minute", -1)}
                   >
                     <Text style={styles.timeBtnText}>−</Text>
                   </TouchableOpacity>
@@ -230,13 +218,7 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                   </Text>
                   <TouchableOpacity
                     style={[styles.timeBtn, { backgroundColor: theme.primary }]}
-                    onPress={() =>
-                      setSelectedDate((d) => {
-                        const n = new Date(d);
-                        n.setMinutes(n.getMinutes() + 1);
-                        return n;
-                      })
-                    }
+                    onPress={() => adjustDate("minute", 1)}
                   >
                     <Text style={styles.timeBtnText}>+</Text>
                   </TouchableOpacity>
@@ -247,11 +229,18 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                 <TouchableOpacity
                   style={[
                     styles.datePickerButton,
-                    { backgroundColor: theme.primary },
+                    {
+                      backgroundColor: isInPast
+                        ? theme.textSecondary
+                        : theme.primary,
+                    },
                   ]}
                   onPress={handleDateConfirm}
+                  disabled={isInPast}
                 >
-                  <Text style={styles.datePickerButtonText}>Confirm</Text>
+                  <Text style={styles.datePickerButtonText}>
+                    {isInPast ? "Select a future time" : "Confirm"}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -271,7 +260,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingTop: 24,
+    paddingBottom: 16,
     borderBottomWidth: 1,
   },
   title: {

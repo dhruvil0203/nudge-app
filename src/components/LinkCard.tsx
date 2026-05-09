@@ -70,7 +70,6 @@ export const LinkCard: React.FC<LinkCardProps> = ({
         { backgroundColor: theme.cardBackground, borderColor: theme.border },
       ]}
     >
-      {/* Header with Priority and Date */}
       <View style={styles.header}>
         <View
           style={[styles.priorityBadge, { backgroundColor: priorityColor }]}
@@ -84,7 +83,6 @@ export const LinkCard: React.FC<LinkCardProps> = ({
         </Text>
       </View>
 
-      {/* Image */}
       <View style={[styles.imageContainer, { backgroundColor: theme.surface }]}>
         {imageLoading && (
           <ActivityIndicator
@@ -104,7 +102,6 @@ export const LinkCard: React.FC<LinkCardProps> = ({
         />
       </View>
 
-      {/* Content */}
       <View style={styles.content}>
         {link.title && (
           <Text style={[styles.title, { color: theme.text }]} numberOfLines={2}>
@@ -129,7 +126,6 @@ export const LinkCard: React.FC<LinkCardProps> = ({
         )}
       </View>
 
-      {/* Reminder Info */}
       {link.reminder_type !== "no_reminder" && (
         <View style={styles.reminderInfo}>
           <Text
@@ -144,7 +140,6 @@ export const LinkCard: React.FC<LinkCardProps> = ({
         </View>
       )}
 
-      {/* Actions */}
       <View style={styles.actions}>
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: theme.primary }]}

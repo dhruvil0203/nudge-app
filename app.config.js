@@ -2,6 +2,7 @@ module.exports = {
   expo: {
     name: "Nudge",
     slug: "nudge",
+    owner: "dhruvil02",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
@@ -39,5 +40,10 @@ module.exports = {
       ],
       "expo-share-intent",
     ],
+    extra: {
+      eas: {
+        projectId: "4eb1257a-a36d-4705-a399-2f72b90bca7f",
+      },
+    },
   },
 };

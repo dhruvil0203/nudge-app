@@ -1,25 +1,15 @@
 import Constants from "expo-constants";
-import { Link } from "./database";
-
-// expo-notifications must NEVER be statically imported in Expo Go —
-// doing so causes its module-level code to call addPushTokenListener,
-// which is a fatal error in Expo Go since SDK 53.
-// Instead, every reference goes through getN(), which returns null in Expo Go.
+import { Link, getPendingLinkCount } from "./database";
 
 const isExpoGo =
   Constants.executionEnvironment === "storeClient" ||
   Constants.appOwnership === "expo";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getN = (): any | null => {
   if (isExpoGo) return null;
-  // Dynamic require — only executed (and thus only loads the native module)
-  // when we are NOT inside Expo Go.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require("expo-notifications");
 };
 
-// Set up the notification display handler once at module load (non-Expo-Go only)
 const N = getN();
 if (N) {
   N.setNotificationHandler({
@@ -31,17 +21,13 @@ if (N) {
   });
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 export interface ReminderTime {
   trigger: { seconds: number };
   label: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 export const initializeNotifications = async (): Promise<void> => {
-  if (isExpoGo) return; // push tokens not available in Expo Go
+  if (isExpoGo) return;
   const Notifications = getN();
   if (!Notifications) return;
   try {
@@ -111,7 +97,7 @@ export const scheduleReminder = async (
   customTime?: Date,
 ): Promise<string | null> => {
   const Notifications = getN();
-  if (!Notifications) return null; // silently skip in Expo Go
+  if (!Notifications) return null;
 
   try {
     let trigger: number;
@@ -171,10 +157,23 @@ export const scheduleWeeklyDigest = async (): Promise<void> => {
     nextSunday.setHours(10, 0, 0, 0);
     const trigger = Math.round((nextSunday.getTime() - now.getTime()) / 1000);
 
+    let digestBody = "You have pending links waiting to be reviewed";
+    try {
+      const count = await getPendingLinkCount();
+      if (count === 0) {
+        digestBody = "Great job! You have no pending links. Keep it up! 🎉";
+      } else if (count === 1) {
+        digestBody = "You have 1 pending link waiting to be reviewed";
+      } else {
+        digestBody = `You have ${count} pending links waiting to be reviewed`;
+      }
+    } catch {
+    }
+
     await Notifications.scheduleNotificationAsync({
       content: {
         title: "Nudge Weekly Digest",
-        body: "You have pending links waiting to be reviewed",
+        body: digestBody,
         data: { type: "digest" },
         badge: 1,
       },
@@ -189,13 +188,11 @@ export const scheduleWeeklyDigest = async (): Promise<void> => {
   }
 };
 
-/** Returns a subscription object. In Expo Go returns a no-op stub. */
 export const setupNotificationListeners = (
   onNotificationResponse: (response: any) => void,
 ) => {
   const Notifications = getN();
   if (!Notifications) {
-    // Expo Go stub — return a no-op subscription so callers can safely call .remove()
     return { remove: () => {} };
   }
   return Notifications.addNotificationResponseReceivedListener(

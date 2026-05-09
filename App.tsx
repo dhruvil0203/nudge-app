@@ -21,7 +21,6 @@ const AppContent = () => {
   useEffect(() => {
     const setupApp = async () => {
       try {
-        // Initialize database (critical)
         await initDatabase();
       } catch (error) {
         console.error("Failed to initialize database:", error);
@@ -29,7 +28,6 @@ const AppContent = () => {
         return;
       }
 
-      // Initialize notifications (non-critical — silently skip in Expo Go)
       try {
         await initializeNotifications();
       } catch (error) {
@@ -45,12 +43,10 @@ const AppContent = () => {
   useEffect(() => {
     if (!dbReady) return;
 
-    // Setup notification listeners
     const subscription = setupNotificationListeners((response) => {
       console.log("Notification tapped:", response);
       const linkId = response.notification.request.content.data.linkId;
       if (linkId) {
-        // You can use deep linking here to navigate to the specific link
       }
     });
 
@@ -59,7 +55,6 @@ const AppContent = () => {
     };
   }, [dbReady]);
 
-  // Handle shared URLs from Share Sheet
   useShareSheet((sharedUrl) => {
     if (sharedUrl) {
       setAddLinkTrigger(sharedUrl);
@@ -75,7 +70,6 @@ const AppContent = () => {
           {
             text: "Save",
             onPress: () => {
-              // The HomeScreen will handle this via the addLinkTrigger state
             },
           },
         ],

@@ -43,7 +43,6 @@ const fetchMetadataWithTimeout = async (
       domain: extractDomain(url),
     };
 
-    // Extract Open Graph meta tags
     const ogTitleMatch = html.match(
       /<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i
     );
@@ -65,7 +64,6 @@ const fetchMetadataWithTimeout = async (
       metadata.image = ogImageMatch[1];
     }
 
-    // Fallback to regular meta tags if OG tags not found
     if (!metadata.title) {
       const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
       if (titleMatch) {
@@ -99,7 +97,6 @@ export const fetchOpenGraphData = async (
       return metadata;
     }
 
-    // Return minimal metadata with just the domain
     return {
       title: null,
       description: null,
@@ -122,7 +119,6 @@ export const isValidUrl = (url: string): boolean => {
     new URL(url);
     return true;
   } catch {
-    // Try adding http:// if no protocol
     try {
       new URL(`http://${url}`);
       return true;

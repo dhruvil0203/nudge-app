@@ -66,7 +66,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const [fetchingMetadata, setFetchingMetadata] = useState(false);
   const [defaultUrl, setDefaultUrl] = useState<string>("");
 
-  // Load links and check clipboard on screen focus
   useFocusEffect(
     React.useCallback(() => {
       loadLinks();
@@ -74,12 +73,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }, []),
   );
 
-  // Load settings on mount
   useEffect(() => {
     loadSettings();
   }, []);
 
-  // Handle shared URL from app params
   useEffect(() => {
     if (route?.params?.addLinkUrl) {
       setDefaultUrl(route.params.addLinkUrl);
@@ -102,8 +99,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     try {
       const clipboardUrl = await getClipboardUrl();
       if (clipboardUrl) {
-        // Optional: You can show a prompt here asking if user wants to save the link
-        // For now, we'll just make it available through the add link modal
       }
     } catch (error) {
       console.error("Failed to check clipboard:", error);
@@ -120,10 +115,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         return;
       }
 
-      // Fetch metadata
       const metadata = await fetchOpenGraphData(normalizedUrl);
 
-      // Add link to database
       const newLink = await addLink(
         normalizedUrl,
         metadata.title,
@@ -133,7 +126,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         priority,
       );
 
-      // Set default reminder if not 'no_reminder'
       if (defaultReminder !== "no_reminder") {
         const notificationId = await scheduleReminder(newLink, defaultReminder);
         if (notificationId) {
@@ -158,7 +150,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   const handleMarkDone = async (link: Link) => {
     try {
-      // Cancel any pending notification
       if (link.notification_id) {
         await cancelReminder(link.notification_id);
       }
@@ -182,7 +173,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     if (!selectedLinkForReminder) return;
 
     try {
-      // Cancel old notification
       if (selectedLinkForReminder.notification_id) {
         await cancelReminder(selectedLinkForReminder.notification_id);
       }
@@ -257,14 +247,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      {/* Header */}
       <View
         style={[
           styles.header,
           { backgroundColor: theme.cardBackground, borderColor: theme.border },
         ]}
       >
-        <Text style={[styles.title, { color: theme.text }]}>LinkStash</Text>
+        <Text style={[styles.title, { color: theme.text }]}>Nudge</Text>
         <TouchableOpacity
           onPress={() => setSettingsModalVisible(true)}
           style={styles.settingsButton}
@@ -273,7 +262,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Tabs */}
       <View
         style={[
           styles.tabBar,
@@ -331,7 +319,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Links List */}
       <LinksList
         links={displayLinks}
         loading={loading}
@@ -345,7 +332,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         showCompleted={activeTab === "completed"}
       />
 
-      {/* Add Link Button */}
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: theme.primary }]}
         onPress={() => setAddLinkModalVisible(true)}
@@ -353,7 +339,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
 
-      {/* Modals */}
       <AddLinkModal
         visible={addLinkModalVisible}
         onClose={() => {

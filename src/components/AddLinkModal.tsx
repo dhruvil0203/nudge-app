@@ -34,7 +34,6 @@ export const AddLinkModal: React.FC<AddLinkModalProps> = ({
   const [priority, setPriority] = useState(PRIORITY_LEVELS.NORMAL);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Sync url state when defaultUrl prop changes (e.g. share intent)
   useEffect(() => {
     setUrl(defaultUrl);
   }, [defaultUrl]);
@@ -174,7 +173,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingTop: 24,
+    paddingBottom: 16,
     borderBottomWidth: 1,
   },
   cancelButton: {
