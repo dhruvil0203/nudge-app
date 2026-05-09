@@ -38,15 +38,14 @@ export const LinkCard: React.FC<LinkCardProps> = ({
 
   const handleOpenLink = async () => {
     try {
-      const canOpen = await Linking.canOpenURL(link.url);
-      if (canOpen) {
-        await Linking.openURL(link.url);
-        onOpen?.();
-      } else {
-        Alert.alert("Cannot open link", "Unable to open this URL");
+      let urlToOpen = link.url;
+      if (!urlToOpen.match(/^https?:\/\//i)) {
+        urlToOpen = `https://${urlToOpen}`;
       }
+      await Linking.openURL(urlToOpen);
+      onOpen?.();
     } catch (error) {
-      Alert.alert("Error", "Failed to open link");
+      Alert.alert("Cannot open link", "Unable to open this URL");
       console.error("Error opening link:", error);
     }
   };

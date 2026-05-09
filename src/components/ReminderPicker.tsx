@@ -38,12 +38,26 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
     REMINDER_OPTIONS.CUSTOM,
   ];
 
-  const clampToNow = (date: Date): Date => {
-    const now = new Date();
-    return date < now ? new Date(now) : date;
+  const getMinDate = (): Date => {
+    const min = new Date();
+    min.setSeconds(min.getSeconds() + 60);
+    return min;
   };
 
-  const isInPast = selectedDate <= new Date();
+  const clampToFuture = (date: Date): Date => {
+    const min = getMinDate();
+    return date < min ? new Date(min) : date;
+  };
+
+  const isInPast = selectedDate.getTime() <= Date.now() + 60_000;
+
+  const wouldGoPast = (unit: "day" | "hour" | "minute"): boolean => {
+    const test = new Date(selectedDate);
+    if (unit === "day") test.setDate(test.getDate() - 1);
+    else if (unit === "hour") test.setHours(test.getHours() - 1);
+    else if (unit === "minute") test.setMinutes(test.getMinutes() - 1);
+    return test.getTime() <= Date.now() + 60_000;
+  };
 
   const handleSelectReminder = (reminderType: string) => {
     if (reminderType === REMINDER_OPTIONS.CUSTOM) {
@@ -59,12 +73,16 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
   };
 
   const handleDateConfirm = () => {
-    if (selectedDate > new Date()) {
+    const minTime = Date.now() + 60_000;
+    if (selectedDate.getTime() > minTime) {
       onSelect(REMINDER_OPTIONS.CUSTOM, selectedDate);
       setShowDatePicker(false);
       onClose();
     } else {
-      Alert.alert("Invalid Time", "Please select a time in the future.");
+      Alert.alert(
+        "Invalid Time",
+        "Please select a time at least 1 minute in the future.",
+      );
     }
   };
 
@@ -74,7 +92,7 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
       if (unit === "day") n.setDate(n.getDate() + direction);
       else if (unit === "hour") n.setHours(n.getHours() + direction);
       else if (unit === "minute") n.setMinutes(n.getMinutes() + direction);
-      return clampToNow(n);
+      return clampToFuture(n);
     });
   };
 
@@ -163,8 +181,16 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                 <Text style={[styles.timeLabel, { color: theme.text }]}>Day</Text>
                 <View style={styles.timeControls}>
                   <TouchableOpacity
-                    style={[styles.timeBtn, { backgroundColor: theme.primary }]}
+                    style={[
+                      styles.timeBtn,
+                      {
+                        backgroundColor: wouldGoPast("day")
+                          ? theme.textSecondary
+                          : theme.primary,
+                      },
+                    ]}
                     onPress={() => adjustDate("day", -1)}
+                    disabled={wouldGoPast("day")}
                   >
                     <Text style={styles.timeBtnText}>−</Text>
                   </TouchableOpacity>
@@ -187,8 +213,16 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                 <Text style={[styles.timeLabel, { color: theme.text }]}>Hour</Text>
                 <View style={styles.timeControls}>
                   <TouchableOpacity
-                    style={[styles.timeBtn, { backgroundColor: theme.primary }]}
+                    style={[
+                      styles.timeBtn,
+                      {
+                        backgroundColor: wouldGoPast("hour")
+                          ? theme.textSecondary
+                          : theme.primary,
+                      },
+                    ]}
                     onPress={() => adjustDate("hour", -1)}
+                    disabled={wouldGoPast("hour")}
                   >
                     <Text style={styles.timeBtnText}>−</Text>
                   </TouchableOpacity>
@@ -208,8 +242,16 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                 <Text style={[styles.timeLabel, { color: theme.text }]}>Minute</Text>
                 <View style={styles.timeControls}>
                   <TouchableOpacity
-                    style={[styles.timeBtn, { backgroundColor: theme.primary }]}
+                    style={[
+                      styles.timeBtn,
+                      {
+                        backgroundColor: wouldGoPast("minute")
+                          ? theme.textSecondary
+                          : theme.primary,
+                      },
+                    ]}
                     onPress={() => adjustDate("minute", -1)}
+                    disabled={wouldGoPast("minute")}
                   >
                     <Text style={styles.timeBtnText}>−</Text>
                   </TouchableOpacity>

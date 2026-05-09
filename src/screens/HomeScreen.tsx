@@ -127,14 +127,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       );
 
       if (defaultReminder !== "no_reminder") {
-        const notificationId = await scheduleReminder(newLink, defaultReminder);
-        if (notificationId) {
-          await updateReminder(
-            newLink.id,
-            defaultReminder,
-            Date.now(),
-            notificationId,
-          );
+        try {
+          const notificationId = await scheduleReminder(newLink, defaultReminder);
+          if (notificationId) {
+            await updateReminder(
+              newLink.id,
+              defaultReminder,
+              Date.now(),
+              notificationId,
+            );
+          }
+        } catch (scheduleError: any) {
+          console.warn("Default reminder scheduling failed:", scheduleError);
         }
       }
 
@@ -181,12 +185,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       let reminderTime: number | null = null;
 
       if (reminderType !== "no_reminder") {
-        notificationId = await scheduleReminder(
-          selectedLinkForReminder,
-          reminderType,
-          customDate,
-        );
-        reminderTime = customDate ? customDate.getTime() : Date.now();
+        try {
+          notificationId = await scheduleReminder(
+            selectedLinkForReminder,
+            reminderType,
+            customDate,
+          );
+          reminderTime = customDate ? customDate.getTime() : Date.now();
+        } catch (scheduleError: any) {
+          Alert.alert(
+            "Invalid Time",
+            scheduleError?.message || "Cannot set reminder in the past.",
+          );
+          return;
+        }
       }
 
       await updateReminder(
