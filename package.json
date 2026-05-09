@@ -24,6 +24,7 @@
     "expo-share-intent": "^6.1.0",
     "expo-sqlite": "~55.0.15",
     "expo-task-manager": "~55.0.15",
+    "expo-updates": "~55.0.21",
     "react": "19.2.0",
     "react-native": "0.83.6",
     "react-native-gesture-handler": "~2.30.0",

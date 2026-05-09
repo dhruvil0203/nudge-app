@@ -11,12 +11,19 @@ module.exports = {
       resizeMode: "contain",
       backgroundColor: "#ffffff",
     },
+    updates: {
+      url: "https://u.expo.dev/4eb1257a-a36d-4705-a399-2f72b90bca7f",
+    },
     assetBundlePatterns: ["**/*"],
     ios: {
       bundleIdentifier: "com.nudge.app",
+      runtimeVersion: {
+        policy: "appVersion",
+      },
     },
     android: {
       package: "com.nudge.app",
+      runtimeVersion: "1.0.0",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff",

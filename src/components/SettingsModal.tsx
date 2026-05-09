@@ -100,7 +100,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 24, paddingBottom: 16, borderBottomWidth: 1 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 48, paddingBottom: 16, borderBottomWidth: 1 },
   title: { fontSize: 18, fontWeight: "600" },
   closeButton: { fontSize: 16, fontWeight: "600" },
   content: { flex: 1, padding: 16 },
