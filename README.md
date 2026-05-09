@@ -1,4 +1,4 @@
-# LinkStash - Universal Link Saving and Reminder Tool
+# Nudge - Universal Link Saving and Reminder Tool
 
 A React Native mobile app built with Expo that allows you to save links from any app, set reminders, and stay organized.
 
@@ -62,7 +62,7 @@ npx expo start
 ## Project Structure
 
 ```
-LinkStash/
+Nudge/
 ├── src/
 │   ├── screens/
 │   │   └── HomeScreen.tsx          # Main home screen with tabs
@@ -206,7 +206,7 @@ If metadata fetching fails, the link is still saved with just the URL.
 
 ## Offline Functionality
 
-LinkStash works completely offline:
+Nudge works completely offline:
 
 - All data is stored locally using SQLite
 - Notifications are local, not push notifications from a server
