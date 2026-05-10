@@ -2,7 +2,7 @@ module.exports = {
   expo: {
     name: "Nudge",
     slug: "nudge",
-    owner: "dhruvil02",
+    owner: "karan0203",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
@@ -12,7 +12,7 @@ module.exports = {
       backgroundColor: "#ffffff",
     },
     updates: {
-      url: "https://u.expo.dev/4eb1257a-a36d-4705-a399-2f72b90bca7f",
+      url: "https://u.expo.dev/b87b8ff5-8ac5-433d-9268-a07ac1da9424",
     },
     assetBundlePatterns: ["**/*"],
     ios: {
@@ -51,11 +51,8 @@ module.exports = {
     ],
     extra: {
       eas: {
-        projectId: "4eb1257a-a36d-4705-a399-2f72b90bca7f",
+        projectId: "b87b8ff5-8ac5-433d-9268-a07ac1da9424",
       },
     },
-    cli: {
-      appVersionSource: "remote"
-    }
   },
 };

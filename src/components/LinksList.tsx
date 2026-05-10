@@ -18,7 +18,6 @@ interface LinksListProps {
   onMarkDone?: (link: Link) => void;
   onSnooze?: (link: Link) => void;
   onDelete?: (link: Link) => void;
-  onPriorityChange?: (link: Link, priority: string) => void;
   emptyMessage?: string;
   showCompleted?: boolean;
 }
@@ -30,7 +29,6 @@ export const LinksList: React.FC<LinksListProps> = ({
   onMarkDone,
   onSnooze,
   onDelete,
-  onPriorityChange,
   emptyMessage = "No links yet",
   showCompleted = false,
 }) => {
@@ -38,14 +36,16 @@ export const LinksList: React.FC<LinksListProps> = ({
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={[styles.emptyEmoji, styles.centerText]}>📭</Text>
+      <Text style={[styles.emptyEmoji, styles.centerText]}>
+        {showCompleted ? "✅" : "📭"}
+      </Text>
       <Text style={[styles.emptyMessage, { color: theme.text }]}>
         {emptyMessage}
       </Text>
       <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
         {showCompleted
           ? "Once you mark links as done, they will appear here"
-          : "Add your first link to get started"}
+          : "Tap the + button to save your first link"}
       </Text>
     </View>
   );
@@ -57,7 +57,6 @@ export const LinksList: React.FC<LinksListProps> = ({
       onMarkDone={() => onMarkDone?.(item)}
       onSnooze={() => onSnooze?.(item)}
       onDelete={() => onDelete?.(item)}
-      onPriorityChange={(priority) => onPriorityChange?.(item, priority)}
       showCompleted={showCompleted}
     />
   );
@@ -65,10 +64,14 @@ export const LinksList: React.FC<LinksListProps> = ({
   if (loading) {
     return (
       <View
-        style={[styles.loadingContainer, { backgroundColor: theme.background }]}
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: theme.background },
+        ]}
       >
+        <Text style={styles.loadingEmoji}>⏳</Text>
         <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-          Loading links...
+          Loading your links...
         </Text>
       </View>
     );
@@ -107,9 +110,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    gap: 12,
+  },
+  loadingEmoji: {
+    fontSize: 40,
   },
   loadingText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "500",
   },
   emptyContainerFlex: {
@@ -132,10 +139,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   emptyMessage: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "700",
     marginBottom: 8,
     textAlign: "center",
+    letterSpacing: -0.3,
   },
   emptySubtitle: {
     fontSize: 14,
@@ -144,5 +152,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingVertical: 12,
+    paddingBottom: 80,
   },
 });

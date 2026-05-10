@@ -14,9 +14,15 @@ export const PRIORITY_LEVELS = {
 };
 
 export const PRIORITY_COLORS = {
-  important: '#FF3B30',
-  normal: '#007AFF',
-  someday: '#999999',
+  important: '#14B8A6',
+  normal: '#7C3AED',
+  someday: '#8E8E93',
+};
+
+export const PRIORITY_ICONS = {
+  someday: '◦',
+  normal: '.',
+  important: '!',
 };
 
 export const REMINDER_LABELS = {
@@ -26,6 +32,15 @@ export const REMINDER_LABELS = {
   tonight: 'Tonight at 8 PM',
   tomorrow: 'Tomorrow at 9 AM',
   custom: 'Custom',
+};
+
+export const REMINDER_ICONS: Record<string, string> = {
+  no_reminder: '—',
+  in_1_minute: '1m',
+  in_1_hour: '1h',
+  tonight: 'PM',
+  tomorrow: 'AM',
+  custom: '...',
 };
 
 export const EMPTY_IMAGE = 'https://via.placeholder.com/400x300?text=No+Image';

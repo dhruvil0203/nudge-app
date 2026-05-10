@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   SafeAreaView,
   Platform,
   StatusBar,
+  Animated,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
+import { useToast } from "../context/ToastContext";
 import { useLinks } from "../hooks/useLinks";
 import { LinksList } from "../components/LinksList";
 import { AddLinkModal } from "../components/AddLinkModal";
@@ -22,6 +23,7 @@ import {
   getSetting,
   setSetting,
 } from "../utils/database";
+import { Ionicons } from "@expo/vector-icons";
 import {
   fetchOpenGraphData,
   normalizeUrl,
@@ -42,7 +44,8 @@ interface HomeScreenProps {
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  const { showToast, showConfirm } = useToast();
   const {
     pendingLinks,
     completedLinks,
@@ -67,6 +70,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   const [fetchingMetadata, setFetchingMetadata] = useState(false);
   const [defaultUrl, setDefaultUrl] = useState<string>("");
 
+  const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
+  const fabScale = useRef(new Animated.Value(1)).current;
+
   useFocusEffect(
     React.useCallback(() => {
       loadLinks();
@@ -84,6 +90,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       setAddLinkModalVisible(true);
     }
   }, [route?.params?.addLinkUrl]);
+
+  useEffect(() => {
+    Animated.spring(tabIndicatorAnim, {
+      toValue: activeTab === "pending" ? 0 : 1,
+      tension: 80,
+      friction: 12,
+      useNativeDriver: true,
+    }).start();
+  }, [activeTab]);
 
   const loadSettings = async () => {
     try {
@@ -106,13 +121,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     }
   };
 
-  const handleAddLink = async (url: string, priority: string) => {
+  const handleAddLink = async (url: string) => {
     try {
       setFetchingMetadata(true);
       const normalizedUrl = normalizeUrl(url);
 
       if (!isValidUrl(normalizedUrl)) {
-        Alert.alert("Invalid URL", "Please enter a valid URL");
+        showToast({
+          message: "Please enter a valid URL",
+          type: "warning",
+          icon: "🔗",
+        });
         return;
       }
 
@@ -124,7 +143,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         metadata.description,
         metadata.image,
         metadata.domain,
-        priority,
+        "normal"
       );
 
       if (defaultReminder !== "no_reminder") {
@@ -143,11 +162,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         }
       }
 
-      Alert.alert("Success", "Link saved successfully");
+      showToast({
+        message: "Link saved",
+        type: "success",
+      });
       setDefaultUrl("");
     } catch (error) {
       console.error("Error adding link:", error);
-      Alert.alert("Error", "Failed to save link");
+      showToast({
+        message: "Failed to save link. Please try again.",
+        type: "error",
+      });
     } finally {
       setFetchingMetadata(false);
     }
@@ -159,10 +184,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         await cancelReminder(link.notification_id);
       }
       await markComplete(link.id);
-      Alert.alert("Done", "Link marked as complete");
+      showToast({
+        message: "Marked as done",
+        type: "success",
+      });
     } catch (error) {
       console.error("Error marking link complete:", error);
-      Alert.alert("Error", "Failed to mark link as complete");
+      showToast({
+        message: "Failed to mark link as complete",
+        type: "error",
+      });
     }
   };
 
@@ -194,10 +225,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           );
           reminderTime = customDate ? customDate.getTime() : Date.now();
         } catch (scheduleError: any) {
-          Alert.alert(
-            "Invalid Time",
-            scheduleError?.message || "Cannot set reminder in the past.",
-          );
+          showToast({
+            message: scheduleError?.message || "Cannot set reminder in the past.",
+            type: "warning",
+            icon: "⏰",
+          });
           return;
         }
       }
@@ -208,49 +240,86 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         reminderTime,
         notificationId,
       );
-      Alert.alert("Reminder Set", "Your reminder has been updated");
+      showToast({
+        message: "Reminder updated",
+        type: "success",
+      });
       setSelectedLinkForReminder(null);
     } catch (error) {
       console.error("Error setting reminder:", error);
-      Alert.alert("Error", "Failed to set reminder");
+      showToast({
+        message: "Failed to set reminder",
+        type: "error",
+      });
     }
   };
 
   const handleDeleteLink = (link: Link) => {
-    Alert.alert("Delete Link", "Are you sure you want to delete this link?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            if (link.notification_id) {
-              await cancelReminder(link.notification_id);
-            }
-            await deleteLink(link.id);
-            Alert.alert("Deleted", "Link has been deleted");
-          } catch (error) {
-            console.error("Error deleting link:", error);
-            Alert.alert("Error", "Failed to delete link");
+    showConfirm({
+      title: "Delete Nudge",
+      message: "Remove this nudge permanently.\nThis action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      destructive: true,
+      icon: "trash-outline",
+      onConfirm: async () => {
+        try {
+          if (link.notification_id) {
+            await cancelReminder(link.notification_id);
           }
-        },
+          await deleteLink(link.id);
+          showToast({
+            message: "Link deleted",
+            type: "info",
+          });
+        } catch (error) {
+          console.error("Error deleting link:", error);
+          showToast({
+            message: "Failed to delete link",
+            type: "error",
+          });
+        }
       },
-    ]);
+    });
   };
 
   const handleClearCompleted = async () => {
     try {
       await clearCompleted();
-      Alert.alert("Cleared", "All completed links have been deleted");
+      showToast({
+        message: "Completed links cleared",
+        type: "success",
+      });
     } catch (error) {
       console.error("Error clearing completed:", error);
-      Alert.alert("Error", "Failed to clear completed links");
+      showToast({
+        message: "Failed to clear completed links",
+        type: "error",
+      });
     }
   };
 
   const handleWeeklyDigestChange = async (value: boolean) => {
     setWeeklyDigestEnabled(value);
     await setSetting("weekly_digest_enabled", value ? "1" : "0");
+  };
+
+  const handleFabPress = () => {
+    Animated.sequence([
+      Animated.spring(fabScale, {
+        toValue: 0.9,
+        tension: 200,
+        friction: 10,
+        useNativeDriver: true,
+      }),
+      Animated.spring(fabScale, {
+        toValue: 1,
+        tension: 200,
+        friction: 10,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    setAddLinkModalVisible(true);
   };
 
   const displayLinks = activeTab === "pending" ? pendingLinks : completedLinks;
@@ -263,73 +332,143 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       <View
         style={[
           styles.header,
-          { backgroundColor: theme.cardBackground, borderColor: theme.border },
+          {
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
+          },
         ]}
       >
-        <Text style={[styles.title, { color: theme.text }]}>Nudge</Text>
+        <View style={styles.headerLeft}>
+          <Text style={[styles.title, { color: theme.text }]}>Nudge</Text>
+          <View
+            style={[
+              styles.countBadge,
+              { backgroundColor: theme.primary },
+            ]}
+          >
+            <Text style={styles.countBadgeText}>{pendingCount}</Text>
+          </View>
+        </View>
         <TouchableOpacity
           onPress={() => setSettingsModalVisible(true)}
-          style={styles.settingsButton}
+          style={[
+            styles.settingsButton,
+            { backgroundColor: theme.surfaceElevated },
+          ]}
+          activeOpacity={0.7}
         >
-          <Text style={styles.settingsButtonText}>⚙️</Text>
+          <Ionicons name="settings-outline" size={20} color={theme.textSecondary} />
         </TouchableOpacity>
       </View>
 
       <View
         style={[
           styles.tabBar,
-          { backgroundColor: theme.tabBackground, borderColor: theme.border },
+          {
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
+          },
         ]}
       >
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            {
-              borderBottomColor:
-                activeTab === "pending" ? theme.primary : "transparent",
-            },
-          ]}
-          onPress={() => setActiveTab("pending")}
-        >
-          <Text
+        <View style={styles.tabContainer}>
+          <Animated.View
             style={[
-              styles.tabLabel,
+              styles.tabIndicator,
               {
-                color:
-                  activeTab === "pending" ? theme.primary : theme.textSecondary,
-                fontWeight: activeTab === "pending" ? "600" : "400",
+                backgroundColor: theme.primary,
+                transform: [
+                  {
+                    translateX: tabIndicatorAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, 1],
+                    }),
+                  },
+                ],
               },
             ]}
+          />
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === "pending" && styles.tabActive,
+            ]}
+            onPress={() => setActiveTab("pending")}
+            activeOpacity={0.7}
           >
-            Pending ({pendingCount})
-          </Text>
-        </TouchableOpacity>
+            <Ionicons name="list-outline" size={18} color={activeTab === "pending" ? theme.primary : theme.tabInactive} style={styles.tabEmoji} />
+            <Text
+              style={[
+                styles.tabLabel,
+                {
+                  color:
+                    activeTab === "pending"
+                      ? theme.primary
+                      : theme.tabInactive,
+                  fontWeight: activeTab === "pending" ? "700" : "500",
+                },
+              ]}
+            >
+              Pending
+            </Text>
+            {pendingCount > 0 && (
+              <View
+                style={[
+                  styles.tabCount,
+                  {
+                    backgroundColor:
+                      activeTab === "pending"
+                        ? theme.primary
+                        : theme.tabInactive,
+                  },
+                ]}
+              >
+                <Text style={styles.tabCountText}>{pendingCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            {
-              borderBottomColor:
-                activeTab === "completed" ? theme.primary : "transparent",
-            },
-          ]}
-          onPress={() => setActiveTab("completed")}
-        >
-          <Text
+          <TouchableOpacity
             style={[
-              styles.tabLabel,
-              {
-                color:
-                  activeTab === "completed"
-                    ? theme.primary
-                    : theme.textSecondary,
-                fontWeight: activeTab === "completed" ? "600" : "400",
-              },
+              styles.tab,
+              activeTab === "completed" && styles.tabActive,
             ]}
+            onPress={() => setActiveTab("completed")}
+            activeOpacity={0.7}
           >
-            Completed ({completedLinks.length})
-          </Text>
-        </TouchableOpacity>
+            <Ionicons name="checkmark-circle-outline" size={18} color={activeTab === "completed" ? theme.primary : theme.tabInactive} style={styles.tabEmoji} />
+            <Text
+              style={[
+                styles.tabLabel,
+                {
+                  color:
+                    activeTab === "completed"
+                      ? theme.primary
+                      : theme.tabInactive,
+                  fontWeight: activeTab === "completed" ? "700" : "500",
+                },
+              ]}
+            >
+              Completed
+            </Text>
+            {completedLinks.length > 0 && (
+              <View
+                style={[
+                  styles.tabCount,
+                  {
+                    backgroundColor:
+                      activeTab === "completed"
+                        ? theme.primary
+                        : theme.tabInactive,
+                  },
+                ]}
+              >
+                <Text style={styles.tabCountText}>
+                  {completedLinks.length}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <LinksList
@@ -345,12 +484,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         showCompleted={activeTab === "completed"}
       />
 
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: theme.primary }]}
-        onPress={() => setAddLinkModalVisible(true)}
+      <Animated.View
+        style={[
+          styles.fabContainer,
+          { transform: [{ scale: fabScale }] },
+        ]}
       >
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: theme.primary }]}
+          onPress={handleFabPress}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add" size={32} color="#FFFFFF" />
+        </TouchableOpacity>
+      </Animated.View>
 
       <AddLinkModal
         visible={addLinkModalVisible}
@@ -401,59 +548,112 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomWidth: 1,
   },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   title: {
-    fontSize: 26,
-    fontWeight: "700",
-    letterSpacing: -0.5,
+    fontSize: 28,
+    fontWeight: "800",
+    letterSpacing: -0.8,
+  },
+  countBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    minWidth: 24,
+    alignItems: "center",
+  },
+  countBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
   },
   settingsButton: {
-    padding: 12,
-    marginTop: -4,
-    marginRight: -8,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
   settingsButtonText: {
-    fontSize: 24,
+    fontSize: 20,
   },
   tabBar: {
-    flexDirection: "row",
     borderBottomWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  tabContainer: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  tabIndicator: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    height: 3,
+    borderRadius: 1.5,
   },
   tab: {
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderBottomWidth: 2,
+    flexDirection: "row",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  tabActive: {
+  },
+  tabEmoji: {
+    fontSize: 14,
   },
   tabLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-    textAlign: "center",
+    fontSize: 13,
+    letterSpacing: 0.1,
   },
-  fab: {
+  tabCount: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    minWidth: 20,
+    alignItems: "center",
+  },
+  tabCountText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  fabContainer: {
     position: "absolute",
     bottom: 24,
     right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  },
+  fab: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
     ...Platform.select({
       ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
+        shadowColor: "#6366F1",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35,
+        shadowRadius: 12,
       },
       android: {
-        elevation: 5,
+        elevation: 8,
       },
     }),
   },
   fabText: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: "300",
     color: "#FFFFFF",
-    lineHeight: 36,
+    lineHeight: 34,
   },
 });

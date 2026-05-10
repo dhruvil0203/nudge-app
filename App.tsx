@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, View, Alert, StatusBar } from "react-native";
+import { ActivityIndicator, View, StatusBar } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { initDatabase } from "./src/utils/database";
@@ -8,6 +8,7 @@ import {
   setupNotificationListeners,
 } from "./src/utils/notifications";
 import { ThemeProvider, useTheme } from "./src/context/ThemeContext";
+import { ToastProvider, useToast } from "./src/context/ToastContext";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { useShareSheet } from "./src/utils/shareSheet";
 
@@ -16,6 +17,7 @@ const Stack = createNativeStackNavigator();
 const AppContent = () => {
   const [dbReady, setDbReady] = useState(false);
   const { theme, isDark } = useTheme();
+  const { showConfirm } = useToast();
   const [addLinkTrigger, setAddLinkTrigger] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,22 +60,15 @@ const AppContent = () => {
   useShareSheet((sharedUrl) => {
     if (sharedUrl) {
       setAddLinkTrigger(sharedUrl);
-      Alert.alert(
-        "Link Detected",
-        "A link was shared with Nudge. Do you want to save it?",
-        [
-          {
-            text: "Cancel",
-            onPress: () => setAddLinkTrigger(null),
-            style: "cancel",
-          },
-          {
-            text: "Save",
-            onPress: () => {
-            },
-          },
-        ],
-      );
+      showConfirm({
+        title: "Link Detected",
+        message: "A link was shared with Nudge. Do you want to save it?",
+        confirmText: "Save",
+        cancelText: "Cancel",
+        icon: "🔗",
+        onConfirm: () => {},
+        onCancel: () => setAddLinkTrigger(null),
+      });
     }
   });
 
@@ -125,7 +120,9 @@ const AppContent = () => {
 export default function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </ThemeProvider>
   );
 }

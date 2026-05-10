@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,10 +7,11 @@ import {
   Modal,
   ScrollView,
   SafeAreaView,
-  Alert,
+  Animated,
 } from "react-native";
 import { useTheme } from "../context/ThemeContext";
-import { REMINDER_LABELS, REMINDER_OPTIONS } from "../constants";
+import { useToast } from "../context/ToastContext";
+import { REMINDER_LABELS, REMINDER_OPTIONS, REMINDER_ICONS } from "../constants";
 
 interface ReminderPickerProps {
   visible: boolean;
@@ -26,8 +27,11 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
   onClose,
 }) => {
   const { theme, isDark } = useTheme();
+  const { showToast } = useToast();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
 
   const reminders = [
     REMINDER_OPTIONS.NO_REMINDER,
@@ -37,6 +41,27 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
     REMINDER_OPTIONS.TOMORROW,
     REMINDER_OPTIONS.CUSTOM,
   ];
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          tension: 80,
+          friction: 12,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      fadeAnim.setValue(0);
+      slideAnim.setValue(20);
+    }
+  }, [visible]);
 
   const getMinDate = (): Date => {
     const min = new Date();
@@ -79,10 +104,11 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
       setShowDatePicker(false);
       onClose();
     } else {
-      Alert.alert(
-        "Invalid Time",
-        "Please select a time at least 1 minute in the future.",
-      );
+      showToast({
+        message: "Please select a time at least 1 minute in the future.",
+        type: "warning",
+        icon: "⏰",
+      });
     }
   };
 
@@ -96,197 +122,311 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
     });
   };
 
+  const getReminderDescription = (reminder: string): string => {
+    switch (reminder) {
+      case REMINDER_OPTIONS.NO_REMINDER:
+        return "No notification will be sent";
+      case REMINDER_OPTIONS.IN_1_MINUTE:
+        return "Quick test reminder";
+      case REMINDER_OPTIONS.IN_1_HOUR:
+        return "Get reminded in 60 minutes";
+      case REMINDER_OPTIONS.TONIGHT:
+        return "We'll nudge you at 8:00 PM";
+      case REMINDER_OPTIONS.TOMORROW:
+        return "Start your day with this link";
+      case REMINDER_OPTIONS.CUSTOM:
+        return "Pick your own date & time";
+      default:
+        return "";
+    }
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
       <SafeAreaView
         style={[styles.container, { backgroundColor: theme.background }]}
       >
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.text }]}>
-            Set Reminder
-          </Text>
-          <TouchableOpacity onPress={onClose}>
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.surface,
+              borderBottomColor: theme.border,
+            },
+          ]}
+        >
+          <View style={styles.titleRow}>
+            <Text style={styles.titleIcon}>⏰</Text>
+            <Text style={[styles.title, { color: theme.text }]}>
+              Set Reminder
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={onClose}
+            style={[
+              styles.closeButtonWrapper,
+              { backgroundColor: theme.surfaceElevated },
+            ]}
+            activeOpacity={0.7}
+          >
             <Text style={[styles.closeButton, { color: theme.primary }]}>
-              Close
+              Done
             </Text>
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {reminders.map((reminder) => (
-            <TouchableOpacity
-              key={reminder}
-              style={[
-                styles.reminderOption,
-                {
-                  backgroundColor:
-                    selectedReminder === reminder
-                      ? theme.surface
-                      : "transparent",
-                  borderColor: theme.border,
-                },
-              ]}
-              onPress={() => handleSelectReminder(reminder)}
-            >
-              <Text
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.contentInner}
+        >
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            }}
+          >
+            {reminders.map((reminder, index) => {
+              const isSelected = selectedReminder === reminder;
+              const icon =
+                REMINDER_ICONS[reminder as keyof typeof REMINDER_ICONS] || "⏰";
+
+              return (
+                <TouchableOpacity
+                  key={reminder}
+                  style={[
+                    styles.reminderOption,
+                    {
+                      backgroundColor: isSelected
+                        ? isDark
+                          ? 'rgba(129, 140, 248, 0.15)'
+                          : 'rgba(99, 102, 241, 0.08)'
+                        : theme.surface,
+                      borderColor: isSelected ? theme.primary : theme.border,
+                      borderWidth: isSelected ? 1.5 : 1,
+                    },
+                  ]}
+                  onPress={() => handleSelectReminder(reminder)}
+                  activeOpacity={0.6}
+                >
+                  <View style={styles.reminderLeft}>
+                    <View
+                      style={[
+                        styles.reminderIconContainer,
+                        {
+                          backgroundColor: isSelected
+                            ? theme.primary
+                            : theme.surfaceElevated,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.reminderIcon, { color: '#FFFFFF' }]}>{icon}</Text>
+                    </View>
+                    <View style={styles.reminderTextContainer}>
+                      <Text
+                        style={[
+                          styles.reminderLabel,
+                          {
+                            color: isSelected ? '#FFFFFF' : theme.text,
+                            fontWeight: isSelected ? "700" : "500",
+                          },
+                        ]}
+                      >
+                        {REMINDER_LABELS[
+                          reminder as keyof typeof REMINDER_LABELS
+                        ]}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.reminderDescription,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        {getReminderDescription(reminder)}
+                      </Text>
+                    </View>
+                  </View>
+                  {isSelected && (
+                    <View
+                      style={[
+                        styles.checkmarkContainer,
+                        { backgroundColor: theme.primary },
+                      ]}
+                    >
+                      <Text style={styles.checkmark}>✓</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+
+            {showDatePicker && (
+              <View
                 style={[
-                  styles.reminderLabel,
+                  styles.datePickerContainer,
                   {
-                    color: theme.text,
-                    fontWeight: selectedReminder === reminder ? "600" : "400",
+                    backgroundColor: theme.surface,
+                    borderColor: theme.border,
                   },
                 ]}
               >
-                {REMINDER_LABELS[reminder as keyof typeof REMINDER_LABELS]}
-              </Text>
-              {selectedReminder === reminder && (
-                <Text style={[styles.checkmark, { color: theme.primary }]}>
-                  ✓
-                </Text>
-              )}
-            </TouchableOpacity>
-          ))}
+                <View style={styles.datePickerHeader}>
+                  <View style={styles.datePickerTitleRow}>
+                    <Text style={styles.datePickerTitleIcon}>📅</Text>
+                    <Text
+                      style={[styles.datePickerTitle, { color: theme.text }]}
+                    >
+                      Select Date & Time
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setShowDatePicker(false)}
+                    style={[
+                      styles.datePickerCloseBtn,
+                      { backgroundColor: theme.surfaceElevated },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.datePickerClose,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      ✕
+                    </Text>
+                  </TouchableOpacity>
+                </View>
 
-          {showDatePicker && (
-            <View
-              style={[
-                styles.datePickerContainer,
-                { backgroundColor: theme.surface, borderColor: theme.border },
-              ]}
-            >
-              <View style={styles.datePickerHeader}>
-                <Text style={[styles.datePickerTitle, { color: theme.text }]}>
-                  Select Date & Time
-                </Text>
-                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                <View
+                  style={[
+                    styles.selectedDateContainer,
+                    {
+                      backgroundColor: isInPast
+                        ? 'rgba(239, 68, 68, 0.1)'
+                        : theme.surfaceElevated,
+                      borderColor: isInPast ? theme.error : 'transparent',
+                    },
+                  ]}
+                >
                   <Text
-                    style={[styles.datePickerClose, { color: theme.primary }]}
-                  >
-                    ✕
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <Text
-                style={[
-                  styles.selectedDateTime,
-                  { color: isInPast ? "#E53935" : theme.textSecondary },
-                ]}
-              >
-                {selectedDate.toLocaleString()}
-                {isInPast ? "  ⚠️ Select a future time" : ""}
-              </Text>
-
-              <View style={styles.timeRow}>
-                <Text style={[styles.timeLabel, { color: theme.text }]}>Day</Text>
-                <View style={styles.timeControls}>
-                  <TouchableOpacity
                     style={[
-                      styles.timeBtn,
+                      styles.selectedDateTime,
                       {
-                        backgroundColor: wouldGoPast("day")
-                          ? theme.textSecondary
-                          : theme.primary,
+                        color: isInPast ? theme.error : theme.text,
                       },
                     ]}
-                    onPress={() => adjustDate("day", -1)}
-                    disabled={wouldGoPast("day")}
                   >
-                    <Text style={styles.timeBtnText}>−</Text>
-                  </TouchableOpacity>
-                  <Text style={[styles.timeValue, { color: theme.text }]}>
-                    {selectedDate.toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
+                    {selectedDate.toLocaleString()}
                   </Text>
-                  <TouchableOpacity
-                    style={[styles.timeBtn, { backgroundColor: theme.primary }]}
-                    onPress={() => adjustDate("day", 1)}
-                  >
-                    <Text style={styles.timeBtnText}>+</Text>
-                  </TouchableOpacity>
+                  {isInPast && (
+                    <Text
+                      style={[styles.pastWarning, { color: theme.error }]}
+                    >
+                      ⚠️ Select a future time
+                    </Text>
+                  )}
                 </View>
-              </View>
 
-              <View style={styles.timeRow}>
-                <Text style={[styles.timeLabel, { color: theme.text }]}>Hour</Text>
-                <View style={styles.timeControls}>
-                  <TouchableOpacity
-                    style={[
-                      styles.timeBtn,
-                      {
-                        backgroundColor: wouldGoPast("hour")
-                          ? theme.textSecondary
-                          : theme.primary,
-                      },
-                    ]}
-                    onPress={() => adjustDate("hour", -1)}
-                    disabled={wouldGoPast("hour")}
-                  >
-                    <Text style={styles.timeBtnText}>−</Text>
-                  </TouchableOpacity>
-                  <Text style={[styles.timeValue, { color: theme.text }]}>
-                    {selectedDate.getHours().toString().padStart(2, "0")}
-                  </Text>
-                  <TouchableOpacity
-                    style={[styles.timeBtn, { backgroundColor: theme.primary }]}
-                    onPress={() => adjustDate("hour", 1)}
-                  >
-                    <Text style={styles.timeBtnText}>+</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+                {(["day", "hour", "minute"] as const).map((unit) => (
+                  <View style={styles.timeRow} key={unit}>
+                    <Text style={[styles.timeLabel, { color: theme.text }]}>
+                      {unit.charAt(0).toUpperCase() + unit.slice(1)}
+                    </Text>
+                    <View style={styles.timeControls}>
+                      <TouchableOpacity
+                        style={[
+                          styles.timeBtn,
+                          {
+                            backgroundColor: wouldGoPast(unit)
+                              ? theme.surfaceElevated
+                              : theme.primary,
+                          },
+                        ]}
+                        onPress={() => adjustDate(unit, -1)}
+                        disabled={wouldGoPast(unit)}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={[
+                            styles.timeBtnText,
+                            {
+                              color: wouldGoPast(unit)
+                                ? theme.textSecondary
+                                : "#FFFFFF",
+                            },
+                          ]}
+                        >
+                          −
+                        </Text>
+                      </TouchableOpacity>
+                      <View
+                        style={[
+                          styles.timeValueContainer,
+                          { backgroundColor: theme.surfaceElevated },
+                        ]}
+                      >
+                        <Text
+                          style={[styles.timeValue, { color: theme.text }]}
+                        >
+                          {unit === "day"
+                            ? selectedDate.toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : unit === "hour"
+                              ? selectedDate
+                                  .getHours()
+                                  .toString()
+                                  .padStart(2, "0")
+                              : selectedDate
+                                  .getMinutes()
+                                  .toString()
+                                  .padStart(2, "0")}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[
+                          styles.timeBtn,
+                          { backgroundColor: theme.primary },
+                        ]}
+                        onPress={() => adjustDate(unit, 1)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.timeBtnText, { color: "#FFFFFF" }]}>
+                          +
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
 
-              <View style={styles.timeRow}>
-                <Text style={[styles.timeLabel, { color: theme.text }]}>Minute</Text>
-                <View style={styles.timeControls}>
-                  <TouchableOpacity
-                    style={[
-                      styles.timeBtn,
-                      {
-                        backgroundColor: wouldGoPast("minute")
-                          ? theme.textSecondary
-                          : theme.primary,
-                      },
-                    ]}
-                    onPress={() => adjustDate("minute", -1)}
-                    disabled={wouldGoPast("minute")}
-                  >
-                    <Text style={styles.timeBtnText}>−</Text>
-                  </TouchableOpacity>
-                  <Text style={[styles.timeValue, { color: theme.text }]}>
-                    {selectedDate.getMinutes().toString().padStart(2, "0")}
-                  </Text>
-                  <TouchableOpacity
-                    style={[styles.timeBtn, { backgroundColor: theme.primary }]}
-                    onPress={() => adjustDate("minute", 1)}
-                  >
-                    <Text style={styles.timeBtnText}>+</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.datePickerButtons}>
                 <TouchableOpacity
                   style={[
                     styles.datePickerButton,
                     {
                       backgroundColor: isInPast
-                        ? theme.textSecondary
+                        ? theme.surfaceElevated
                         : theme.primary,
                     },
                   ]}
                   onPress={handleDateConfirm}
                   disabled={isInPast}
+                  activeOpacity={0.7}
                 >
-                  <Text style={styles.datePickerButtonText}>
-                    {isInPast ? "Select a future time" : "Confirm"}
+                  <Text
+                    style={[
+                      styles.datePickerButtonText,
+                      {
+                        color: isInPast ? theme.textSecondary : "#FFFFFF",
+                      },
+                    ]}
+                  >
+                    {isInPast ? "Select a future time" : "✓  Confirm Reminder"}
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          )}
+            )}
+          </Animated.View>
         </ScrollView>
       </SafeAreaView>
     </Modal>
@@ -303,44 +443,92 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingTop: 48,
-    paddingBottom: 16,
+    paddingBottom: 14,
     borderBottomWidth: 1,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  titleIcon: {
+    fontSize: 20,
   },
   title: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
+    letterSpacing: -0.3,
+  },
+  closeButtonWrapper: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 16,
   },
   closeButton: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 14,
+    fontWeight: "700",
   },
   content: {
     flex: 1,
-    paddingVertical: 16,
+  },
+  contentInner: {
+    padding: 16,
+    paddingBottom: 40,
   },
   reminderOption: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 10,
+    borderRadius: 14,
+  },
+  reminderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: 12,
+  },
+  reminderIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  reminderIcon: {
+    fontSize: 18,
+  },
+  reminderTextContainer: {
+    flex: 1,
   },
   reminderLabel: {
-    fontSize: 16,
+    fontSize: 15,
+    marginBottom: 2,
+  },
+  reminderDescription: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  checkmarkContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
   },
   checkmark: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#FFFFFF",
   },
   datePickerContainer: {
-    marginHorizontal: 16,
-    marginVertical: 16,
-    borderRadius: 8,
-    padding: 16,
+    marginTop: 8,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
   },
   datePickerHeader: {
     flexDirection: "row",
@@ -348,69 +536,95 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+  datePickerTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  datePickerTitleIcon: {
+    fontSize: 16,
+  },
   datePickerTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
-  datePickerClose: {
-    fontSize: 20,
-    fontWeight: "600",
-  },
-  selectedDateTime: {
-    fontSize: 14,
-    marginBottom: 40,
-    marginTop: 18,
-    textAlign: "center",
-  },
-  datePickerButtons: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 24,
-  },
-  datePickerButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
+  datePickerCloseBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     justifyContent: "center",
     alignItems: "center",
   },
-  datePickerButtonText: {
-    color: "#FFFFFF",
+  datePickerClose: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  selectedDateContainer: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  selectedDateTime: {
+    fontSize: 15,
     fontWeight: "600",
+  },
+  pastWarning: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 4,
   },
   timeRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 14,
   },
   timeLabel: {
-    fontSize: 15,
-    fontWeight: "500",
-    width: 40,
+    fontSize: 14,
+    fontWeight: "600",
+    width: 55,
+    textTransform: "capitalize",
   },
   timeControls: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
   },
   timeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
   },
   timeBtnText: {
-    color: "#FFFFFF",
     fontSize: 20,
     fontWeight: "600",
     lineHeight: 22,
   },
+  timeValueContainer: {
+    minWidth: 70,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
   timeValue: {
     fontSize: 15,
-    fontWeight: "600",
-    minWidth: 60,
-    textAlign: "center",
+    fontWeight: "700",
+  },
+  datePickerButton: {
+    paddingVertical: 14,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  datePickerButtonText: {
+    fontWeight: "700",
+    fontSize: 15,
   },
 });
