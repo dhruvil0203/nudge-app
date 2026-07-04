@@ -78,13 +78,14 @@ export const AddLinkModal: React.FC<AddLinkModalProps> = ({
       onClose();
     } catch (error) {
       console.error("Error adding link:", error);
-      showToast({ message: "Failed to add link", type: "error" });
+      showToast({ message: "Failed to save link. Please try again.", type: "error" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const isLoading = loading || isSubmitting;
+  const hasUrl = url.trim().length > 0;
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
@@ -106,20 +107,35 @@ export const AddLinkModal: React.FC<AddLinkModalProps> = ({
             ]}
           >
             <View style={styles.headerLeftSpacer} />
-            
+
             <View style={styles.titleContainer}>
               <Text style={[styles.title, { color: theme.text }]}>
                 Add New Link
+              </Text>
+              <Text
+                style={[
+                  styles.subtitle,
+                  { color: theme.textSecondary },
+                ]}
+              >
+                Save it now, nudge it later.
               </Text>
             </View>
 
             <TouchableOpacity
               onPress={onClose}
               disabled={isLoading}
-              style={styles.headerCloseButton}
+              style={[
+                styles.closeButton,
+                { backgroundColor: theme.surfaceElevated },
+              ]}
               activeOpacity={0.6}
             >
-              <Ionicons name="close" size={28} color={theme.textSecondary} />
+              <Ionicons
+                name="close"
+                size={20}
+                color={theme.textSecondary}
+              />
             </TouchableOpacity>
           </Animated.View>
 
@@ -136,8 +152,21 @@ export const AddLinkModal: React.FC<AddLinkModalProps> = ({
             >
               <View style={styles.section}>
                 <View style={styles.labelRow}>
-                  <Ionicons name="globe-outline" size={16} color={theme.textSecondary} />
-                  <Text style={[styles.label, { color: theme.textSecondary }]}>
+                  <View
+                    style={[
+                      styles.labelIconContainer,
+                      { backgroundColor: theme.warmPeach },
+                    ]}
+                  >
+                    <Ionicons
+                      name="link-outline"
+                      size={16}
+                      color={theme.primary}
+                    />
+                  </View>
+                  <Text
+                    style={[styles.label, { color: theme.text }]}
+                  >
                     URL
                   </Text>
                 </View>
@@ -146,14 +175,16 @@ export const AddLinkModal: React.FC<AddLinkModalProps> = ({
                     styles.inputContainer,
                     {
                       backgroundColor: theme.surface,
-                      borderColor: isFocused ? theme.primary : theme.border,
+                      borderColor: isFocused
+                        ? theme.primary
+                        : theme.border,
                     },
                   ]}
                 >
                   <TextInput
                     style={[styles.input, { color: theme.text }]}
-                    placeholder="Paste your link here..."
-                    placeholderTextColor={theme.textSecondary}
+                    placeholder="https://example.com/article"
+                    placeholderTextColor={theme.tabInactive}
                     value={url}
                     onChangeText={setUrl}
                     editable={!isLoading}
@@ -167,21 +198,21 @@ export const AddLinkModal: React.FC<AddLinkModalProps> = ({
                     keyboardType="url"
                   />
                 </View>
-                <Text
-                  style={[styles.helperText, { color: theme.textSecondary }]}
-                >
-                  Title, description & preview will be fetched automatically
-                </Text>
               </View>
 
               {isLoading && (
                 <View
                   style={[
                     styles.loadingContainer,
-                    { backgroundColor: theme.surface, borderColor: theme.border },
+                    {
+                      backgroundColor: theme.surfaceElevated,
+                    },
                   ]}
                 >
-                  <ActivityIndicator size="large" color={theme.primary} />
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.primary}
+                  />
                   <Text
                     style={[
                       styles.loadingText,
@@ -193,34 +224,86 @@ export const AddLinkModal: React.FC<AddLinkModalProps> = ({
                 </View>
               )}
 
+              {!isLoading && hasUrl && (
+                <View
+                  style={[
+                    styles.urlPreview,
+                    {
+                      backgroundColor: theme.surfaceElevated,
+                      borderColor: theme.border,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="link"
+                    size={16}
+                    color={theme.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.urlPreviewText,
+                      { color: theme.text },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {url}
+                  </Text>
+                </View>
+              )}
+
+              <View style={styles.helperContainer}>
+                <Ionicons
+                  name="sparkles"
+                  size={16}
+                  color={theme.accentPurple}
+                />
+                <Text
+                  style={[
+                    styles.helperText,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  We'll automatically fetch the title, description
+                  and preview for you.
+                </Text>
+              </View>
+
               <TouchableOpacity
                 onPress={handleAdd}
-                disabled={isLoading || !url.trim()}
+                disabled={isLoading || !hasUrl}
                 style={[
                   styles.saveButtonFull,
                   {
-                    backgroundColor: isLoading || !url.trim()
-                      ? theme.surfaceElevated
-                      : theme.primary,
+                    backgroundColor:
+                      isLoading || !hasUrl
+                        ? theme.surfaceElevated
+                        : theme.primary,
                   },
                 ]}
                 activeOpacity={0.8}
               >
                 {isLoading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator
+                    size="small"
+                    color="#FFFFFF"
+                  />
                 ) : (
                   <>
-                    <Ionicons 
-                      name="bookmark" 
-                      size={20} 
-                      color={!url.trim() ? theme.textSecondary : "#FFFFFF"} 
+                    <Ionicons
+                      name="bookmark"
+                      size={20}
+                      color={
+                        !hasUrl
+                          ? theme.tabInactive
+                          : "#FFFFFF"
+                      }
                     />
                     <Text
                       style={[
                         styles.saveButtonFullText,
                         {
-                          color: !url.trim()
-                            ? theme.textSecondary
+                          color: !hasUrl
+                            ? theme.tabInactive
                             : "#FFFFFF",
                         },
                       ]}
@@ -247,18 +330,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 56,
+    paddingTop: Platform.OS === "ios" ? 52 : 48,
     paddingBottom: 16,
     borderBottomWidth: 1,
   },
   headerLeftSpacer: {
-    width: 40,
+    width: 36,
   },
-  headerCloseButton: {
-    width: 40,
-    height: 40,
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: "center",
-    alignItems: "flex-end",
+    alignItems: "center",
   },
   titleContainer: {
     flex: 1,
@@ -269,12 +353,16 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: -0.3,
   },
+  subtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
   content: {
     flex: 1,
     padding: 24,
   },
   section: {
-    marginBottom: 32,
+    marginBottom: 20,
   },
   labelRow: {
     flexDirection: "row",
@@ -282,14 +370,17 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-  labelIcon: {
-    fontSize: 16,
+  labelIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
   },
   label: {
     fontSize: 15,
     fontWeight: "700",
     letterSpacing: 0.2,
-    textTransform: "uppercase",
   },
   inputContainer: {
     borderWidth: 1.5,
@@ -303,20 +394,39 @@ const styles = StyleSheet.create({
     minHeight: 90,
     lineHeight: 22,
   },
+  urlPreview: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  urlPreviewText: {
+    fontSize: 13,
+    fontWeight: "500",
+    flex: 1,
+  },
+  helperContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 24,
+    paddingHorizontal: 4,
+  },
   helperText: {
     fontSize: 13,
-    marginTop: 10,
-    marginLeft: 4,
     lineHeight: 18,
+    flex: 1,
   },
   saveButtonFull: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: 14,
     gap: 10,
-    marginTop: 10,
   },
   saveButtonFullText: {
     fontSize: 16,
@@ -324,12 +434,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   loadingContainer: {
-    justifyContent: "center",
+    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 12,
+    justifyContent: "center",
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 10,
+    marginBottom: 16,
   },
   loadingText: {
     fontSize: 14,

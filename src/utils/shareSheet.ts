@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useShareIntent } from "expo-share-intent";
+import { useEffect, useState, useRef } from "react";
+import * as Linking from "expo-linking";
 
 export interface SharedItem {
   url?: string;
@@ -10,24 +10,36 @@ export interface SharedItem {
 
 export const useShareSheet = (onSharedUrl?: (url: string) => void) => {
   const [sharedUrl, setSharedUrl] = useState<string | null>(null);
-  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
+  const onSharedUrlRef = useRef(onSharedUrl);
+  onSharedUrlRef.current = onSharedUrl;
+  const processedUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!hasShareIntent) return;
+    const handleUrl = (event: { url: string }) => {
+      const url = event.url;
+      if (url && url !== processedUrlRef.current) {
+        processedUrlRef.current = url;
+        setSharedUrl(url);
+        onSharedUrlRef.current?.(url);
+      }
+    };
 
-    const url =
-      shareIntent.webUrl ??
-      (shareIntent.type === "text" ? shareIntent.text : undefined);
+    const sub = Linking.addEventListener("url", handleUrl);
 
-    if (url) {
-      setSharedUrl(url);
-      onSharedUrl?.(url);
-    }
-  }, [hasShareIntent, shareIntent, onSharedUrl]);
+    Linking.getInitialURL().then((url) => {
+      if (url && url !== processedUrlRef.current) {
+        processedUrlRef.current = url;
+        setSharedUrl(url);
+        onSharedUrlRef.current?.(url);
+      }
+    });
+
+    return () => sub.remove();
+  }, []);
 
   const clearSharedUrl = () => {
     setSharedUrl(null);
-    resetShareIntent();
+    processedUrlRef.current = null;
   };
 
   return { sharedUrl, clearSharedUrl };

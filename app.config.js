@@ -5,7 +5,7 @@ module.exports = {
     owner: "karan0203",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/icon.png",
+    icon: "./assets/app-icon.png",
     splash: {
       image: "./assets/splash.png",
       resizeMode: "contain",
@@ -25,7 +25,7 @@ module.exports = {
       package: "com.nudge.app",
       runtimeVersion: "1.0.0",
       adaptiveIcon: {
-        foregroundImage: "./assets/adaptive-icon.png",
+        foregroundImage: "./assets/app-icon.png",
         backgroundColor: "#ffffff",
       },
       permissions: [
@@ -36,7 +36,7 @@ module.exports = {
       ],
     },
     web: {
-      favicon: "./assets/favicon.png",
+      favicon: "./assets/app-icon.png",
     },
     scheme: "nudge",
     plugins: [
@@ -47,7 +47,6 @@ module.exports = {
           color: "#ffffff",
         },
       ],
-      "expo-share-intent",
     ],
     extra: {
       eas: {

@@ -10,7 +10,11 @@ interface ThemeContextType {
   toggleTheme: () => void;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const ThemeContext = createContext<ThemeContextType>({
+  theme: lightTheme,
+  isDark: false,
+  toggleTheme: () => {},
+});
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -47,10 +51,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const theme = isDark ? darkTheme : lightTheme;
 
-  if (isLoading) {
-    return null;
-  }
-
   return (
     <ThemeContext.Provider value={{ theme, isDark, toggleTheme }}>
       {children}
@@ -59,9 +59,5 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
 };
 
 export const useTheme = (): ThemeContextType => {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error("useTheme must be used within ThemeProvider");
-  }
-  return context;
+  return useContext(ThemeContext);
 };

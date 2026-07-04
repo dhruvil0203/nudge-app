@@ -8,10 +8,12 @@ import {
   ScrollView,
   SafeAreaView,
   Animated,
+  Platform,
 } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
-import { REMINDER_LABELS, REMINDER_OPTIONS, REMINDER_ICONS } from "../constants";
+import { REMINDER_LABELS, REMINDER_OPTIONS } from "../constants";
+import { Ionicons } from "@expo/vector-icons";
 
 interface ReminderPickerProps {
   visible: boolean;
@@ -60,6 +62,8 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
     } else {
       fadeAnim.setValue(0);
       slideAnim.setValue(20);
+      setShowDatePicker(false);
+      setSelectedDate(new Date());
     }
   }, [visible]);
 
@@ -141,6 +145,25 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
     }
   };
 
+  const getReminderIcon = (reminder: string): { name: string; color: string; bg: string } => {
+    switch (reminder) {
+      case REMINDER_OPTIONS.NO_REMINDER:
+        return { name: "close-circle", color: theme.tabInactive, bg: theme.surfaceElevated };
+      case REMINDER_OPTIONS.IN_1_MINUTE:
+        return { name: "time", color: theme.primary, bg: theme.warmPeach };
+      case REMINDER_OPTIONS.IN_1_HOUR:
+        return { name: "time", color: theme.accentPurple, bg: isDark ? "rgba(168, 141, 170, 0.15)" : "rgba(139, 107, 141, 0.1)" };
+      case REMINDER_OPTIONS.TONIGHT:
+        return { name: "moon", color: theme.accentTeal, bg: isDark ? "rgba(20, 184, 166, 0.15)" : "rgba(13, 148, 136, 0.1)" };
+      case REMINDER_OPTIONS.TOMORROW:
+        return { name: "sunny", color: theme.primary, bg: theme.warmPeach };
+      case REMINDER_OPTIONS.CUSTOM:
+        return { name: "calendar", color: theme.warmTerracotta, bg: theme.warmPeach };
+      default:
+        return { name: "alarm", color: theme.primary, bg: theme.warmPeach };
+    }
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
       <SafeAreaView
@@ -156,10 +179,17 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
           ]}
         >
           <View style={styles.titleRow}>
-            <Text style={styles.titleIcon}>⏰</Text>
-            <Text style={[styles.title, { color: theme.text }]}>
-              Set Reminder
-            </Text>
+            <View style={[styles.headerIconContainer, { backgroundColor: theme.warmPeach }]}>
+              <Ionicons name="alarm-outline" size={20} color={theme.primary} />
+            </View>
+            <View>
+              <Text style={[styles.title, { color: theme.text }]}>
+                Set Reminder
+              </Text>
+              <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+                When should we nudge you?
+              </Text>
+            </View>
           </View>
           <TouchableOpacity
             onPress={onClose}
@@ -169,9 +199,7 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
             ]}
             activeOpacity={0.7}
           >
-            <Text style={[styles.closeButton, { color: theme.primary }]}>
-              Done
-            </Text>
+            <Ionicons name="close" size={20} color={theme.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -186,10 +214,9 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
               transform: [{ translateY: slideAnim }],
             }}
           >
-            {reminders.map((reminder, index) => {
+            {reminders.map((reminder) => {
               const isSelected = selectedReminder === reminder;
-              const icon =
-                REMINDER_ICONS[reminder as keyof typeof REMINDER_ICONS] || "⏰";
+              const iconConfig = getReminderIcon(reminder);
 
               return (
                 <TouchableOpacity
@@ -198,9 +225,7 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                     styles.reminderOption,
                     {
                       backgroundColor: isSelected
-                        ? isDark
-                          ? 'rgba(129, 140, 248, 0.15)'
-                          : 'rgba(99, 102, 241, 0.08)'
+                        ? theme.warmPeach
                         : theme.surface,
                       borderColor: isSelected ? theme.primary : theme.border,
                       borderWidth: isSelected ? 1.5 : 1,
@@ -213,21 +238,21 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                     <View
                       style={[
                         styles.reminderIconContainer,
-                        {
-                          backgroundColor: isSelected
-                            ? theme.primary
-                            : theme.surfaceElevated,
-                        },
+                        { backgroundColor: iconConfig.bg },
                       ]}
                     >
-                      <Text style={[styles.reminderIcon, { color: '#FFFFFF' }]}>{icon}</Text>
+                      <Ionicons
+                        name={iconConfig.name as any}
+                        size={20}
+                        color={iconConfig.color}
+                      />
                     </View>
                     <View style={styles.reminderTextContainer}>
                       <Text
                         style={[
                           styles.reminderLabel,
                           {
-                            color: isSelected ? '#FFFFFF' : theme.text,
+                            color: theme.text,
                             fontWeight: isSelected ? "700" : "500",
                           },
                         ]}
@@ -253,7 +278,7 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                         { backgroundColor: theme.primary },
                       ]}
                     >
-                      <Text style={styles.checkmark}>✓</Text>
+                      <Ionicons name="checkmark" size={14} color="#FFFFFF" />
                     </View>
                   )}
                 </TouchableOpacity>
@@ -272,7 +297,9 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
               >
                 <View style={styles.datePickerHeader}>
                   <View style={styles.datePickerTitleRow}>
-                    <Text style={styles.datePickerTitleIcon}>📅</Text>
+                    <View style={[styles.datePickerIconContainer, { backgroundColor: theme.warmPeach }]}>
+                      <Ionicons name="calendar-outline" size={18} color={theme.primary} />
+                    </View>
                     <Text
                       style={[styles.datePickerTitle, { color: theme.text }]}
                     >
@@ -286,14 +313,7 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                       { backgroundColor: theme.surfaceElevated },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.datePickerClose,
-                        { color: theme.textSecondary },
-                      ]}
-                    >
-                      ✕
-                    </Text>
+                    <Ionicons name="close" size={16} color={theme.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
@@ -322,7 +342,7 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                     <Text
                       style={[styles.pastWarning, { color: theme.error }]}
                     >
-                      ⚠️ Select a future time
+                      Select a future time
                     </Text>
                   )}
                 </View>
@@ -346,18 +366,11 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                         disabled={wouldGoPast(unit)}
                         activeOpacity={0.7}
                       >
-                        <Text
-                          style={[
-                            styles.timeBtnText,
-                            {
-                              color: wouldGoPast(unit)
-                                ? theme.textSecondary
-                                : "#FFFFFF",
-                            },
-                          ]}
-                        >
-                          −
-                        </Text>
+                        <Ionicons
+                          name="remove"
+                          size={18}
+                          color={wouldGoPast(unit) ? theme.textSecondary : "#FFFFFF"}
+                        />
                       </TouchableOpacity>
                       <View
                         style={[
@@ -392,9 +405,7 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                         onPress={() => adjustDate(unit, 1)}
                         activeOpacity={0.7}
                       >
-                        <Text style={[styles.timeBtnText, { color: "#FFFFFF" }]}>
-                          +
-                        </Text>
+                        <Ionicons name="add" size={18} color="#FFFFFF" />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -413,6 +424,11 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                   disabled={isInPast}
                   activeOpacity={0.7}
                 >
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={18}
+                    color={isInPast ? theme.textSecondary : "#FFFFFF"}
+                  />
                   <Text
                     style={[
                       styles.datePickerButtonText,
@@ -421,7 +437,7 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                       },
                     ]}
                   >
-                    {isInPast ? "Select a future time" : "✓  Confirm Reminder"}
+                    {isInPast ? "Select a future time" : "Confirm Reminder"}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -442,31 +458,37 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 48,
+    paddingTop: Platform.OS === "ios" ? 48 : 44,
     paddingBottom: 14,
     borderBottomWidth: 1,
   },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 12,
   },
-  titleIcon: {
-    fontSize: 20,
+  headerIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
   title: {
     fontSize: 18,
     fontWeight: "700",
     letterSpacing: -0.3,
   },
-  closeButtonWrapper: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 16,
+  subtitle: {
+    fontSize: 12,
+    marginTop: 2,
   },
-  closeButton: {
-    fontSize: 14,
-    fontWeight: "700",
+  closeButtonWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
   },
   content: {
     flex: 1,
@@ -491,14 +513,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   reminderIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-  },
-  reminderIcon: {
-    fontSize: 18,
   },
   reminderTextContainer: {
     flex: 1,
@@ -519,11 +538,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginLeft: 8,
   },
-  checkmark: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#FFFFFF",
-  },
   datePickerContainer: {
     marginTop: 8,
     borderRadius: 16,
@@ -541,8 +555,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  datePickerTitleIcon: {
-    fontSize: 16,
+  datePickerIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
   datePickerTitle: {
     fontSize: 16,
@@ -554,10 +572,6 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     justifyContent: "center",
     alignItems: "center",
-  },
-  datePickerClose: {
-    fontSize: 14,
-    fontWeight: "700",
   },
   selectedDateContainer: {
     paddingVertical: 12,
@@ -600,11 +614,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  timeBtnText: {
-    fontSize: 20,
-    fontWeight: "600",
-    lineHeight: 22,
-  },
   timeValueContainer: {
     minWidth: 70,
     paddingVertical: 8,
@@ -617,11 +626,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   datePickerButton: {
+    flexDirection: "row",
     paddingVertical: 14,
     borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
     marginTop: 10,
+    gap: 8,
   },
   datePickerButtonText: {
     fontWeight: "700",

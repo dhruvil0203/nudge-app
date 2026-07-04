@@ -1,50 +1,33 @@
-import * as SQLite from "expo-sqlite";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const DATABASE_NAME = "linkstash.db";
-
-let db: SQLite.SQLiteDatabase;
+const LINKS_KEY = "@nudge/links";
+const SETTINGS_KEY = "@nudge/settings";
+let nextId = 1;
 
 export const initDatabase = async () => {
   try {
-    db = await SQLite.openDatabaseAsync(DATABASE_NAME);
-    await db.execAsync(
-      `
-      CREATE TABLE IF NOT EXISTS links (
-        id INTEGER PRIMARY KEY NOT NULL,
-        url TEXT NOT NULL,
-        title TEXT,
-        description TEXT,
-        image TEXT,
-        domain TEXT,
-        priority TEXT DEFAULT 'normal',
-        status TEXT DEFAULT 'pending',
-        reminder_type TEXT DEFAULT 'no_reminder',
-        reminder_time INTEGER,
-        notification_id TEXT,
-        created_at INTEGER NOT NULL,
-        completed_at INTEGER,
-        updated_at INTEGER NOT NULL
-      );
+    const linksJson = await AsyncStorage.getItem(LINKS_KEY);
+    const links: Link[] = linksJson ? JSON.parse(linksJson) : [];
+    if (links.length > 0) {
+      nextId = Math.max(...links.map((l) => l.id)) + 1;
+    }
 
-      CREATE TABLE IF NOT EXISTS settings (
-        key TEXT PRIMARY KEY,
-        value TEXT
-      );
-
-      INSERT OR IGNORE INTO settings (key, value) VALUES ('default_reminder', 'no_reminder');
-      INSERT OR IGNORE INTO settings (key, value) VALUES ('weekly_digest_enabled', '1');
-      INSERT OR IGNORE INTO settings (key, value) VALUES ('theme_mode', 'light');
-      INSERT OR IGNORE INTO settings (key, value) VALUES ('last_digest_timestamp', '0');
-    `
-    );
+    const settingsJson = await AsyncStorage.getItem(SETTINGS_KEY);
+    if (!settingsJson) {
+      const defaults: Record<string, string> = {
+        default_reminder: "no_reminder",
+        weekly_digest_enabled: "1",
+        theme_mode: "light",
+        last_digest_timestamp: "0",
+      };
+      await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(defaults));
+    }
     console.log("Database initialized successfully");
   } catch (error) {
     console.error("Database initialization error:", error);
     throw error;
   }
 };
-
-export const getDatabase = () => db;
 
 export interface Link {
   id: number;
@@ -68,6 +51,15 @@ export interface Settings {
   value: string;
 }
 
+export const getAllLinks = async (): Promise<Link[]> => {
+  const json = await AsyncStorage.getItem(LINKS_KEY);
+  return json ? JSON.parse(json) : [];
+};
+
+const saveAllLinks = async (links: Link[]): Promise<void> => {
+  await AsyncStorage.setItem(LINKS_KEY, JSON.stringify(links));
+};
+
 export const addLink = async (
   url: string,
   title: string | null = null,
@@ -77,18 +69,27 @@ export const addLink = async (
   priority: string = "normal",
 ): Promise<Link> => {
   const now = Date.now();
-  const result = await db.runAsync(
-    `INSERT INTO links (url, title, description, image, domain, priority, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [url, title, description, image, domain, priority, now, now],
-  );
+  const link: Link = {
+    id: nextId++,
+    url,
+    title,
+    description,
+    image,
+    domain,
+    priority,
+    status: "pending",
+    reminder_type: "no_reminder",
+    reminder_time: null,
+    notification_id: null,
+    created_at: now,
+    completed_at: null,
+    updated_at: now,
+  };
 
-  const link = await db.getFirstAsync<Link>(
-    "SELECT * FROM links WHERE id = ?",
-    [result.lastInsertRowId],
-  );
-
-  return link!;
+  const links = await getAllLinks();
+  links.push(link);
+  await saveAllLinks(links);
+  return link;
 };
 
 export const updateLinkReminder = async (
@@ -97,105 +98,113 @@ export const updateLinkReminder = async (
   reminderTime: number | null = null,
   notificationId: string | null = null,
 ): Promise<void> => {
-  await db.runAsync(
-    `UPDATE links SET reminder_type = ?, reminder_time = ?, notification_id = ?, updated_at = ?
-     WHERE id = ?`,
-    [reminderType, reminderTime, notificationId, Date.now(), linkId],
-  );
+  const links = await getAllLinks();
+  const idx = links.findIndex((l) => l.id === linkId);
+  if (idx === -1) return;
+  links[idx] = {
+    ...links[idx],
+    reminder_type: reminderType,
+    reminder_time: reminderTime,
+    notification_id: notificationId,
+    updated_at: Date.now(),
+  };
+  await saveAllLinks(links);
 };
 
 export const markLinkComplete = async (linkId: number): Promise<void> => {
-  await db.runAsync(
-    `UPDATE links SET status = 'completed', completed_at = ?, updated_at = ?
-     WHERE id = ?`,
-    [Date.now(), Date.now(), linkId],
-  );
+  const links = await getAllLinks();
+  const idx = links.findIndex((l) => l.id === linkId);
+  if (idx === -1) return;
+  links[idx] = {
+    ...links[idx],
+    status: "completed",
+    completed_at: Date.now(),
+    updated_at: Date.now(),
+  };
+  await saveAllLinks(links);
 };
 
 export const updateLinkPriority = async (
   linkId: number,
   priority: string,
 ): Promise<void> => {
-  await db.runAsync(
-    `UPDATE links SET priority = ?, updated_at = ?
-     WHERE id = ?`,
-    [priority, Date.now(), linkId],
-  );
+  const links = await getAllLinks();
+  const idx = links.findIndex((l) => l.id === linkId);
+  if (idx === -1) return;
+  links[idx] = {
+    ...links[idx],
+    priority,
+    updated_at: Date.now(),
+  };
+  await saveAllLinks(links);
 };
 
 export const getPendingLinks = async (): Promise<Link[]> => {
-  const links = await db.getAllAsync<Link>(
-    `SELECT * FROM links WHERE status = 'pending' ORDER BY created_at DESC`,
-  );
-  return links || [];
+  const links = await getAllLinks();
+  return links
+    .filter((l) => l.status === "pending")
+    .sort((a, b) => b.created_at - a.created_at);
 };
 
 export const getCompletedLinks = async (): Promise<Link[]> => {
-  const links = await db.getAllAsync<Link>(
-    `SELECT * FROM links WHERE status = 'completed' ORDER BY completed_at DESC`,
-  );
-  return links || [];
+  const links = await getAllLinks();
+  return links
+    .filter((l) => l.status === "completed")
+    .sort((a, b) => (b.completed_at ?? 0) - (a.completed_at ?? 0));
 };
 
 export const getLinkById = async (id: number): Promise<Link | null> => {
-  const link = await db.getFirstAsync<Link>(
-    "SELECT * FROM links WHERE id = ?",
-    [id],
-  );
-  return link || null;
+  const links = await getAllLinks();
+  return links.find((l) => l.id === id) || null;
 };
 
 export const deleteLink = async (id: number): Promise<void> => {
-  await db.runAsync("DELETE FROM links WHERE id = ?", [id]);
+  const links = await getAllLinks();
+  await saveAllLinks(links.filter((l) => l.id !== id));
 };
 
 export const clearCompletedLinks = async (): Promise<void> => {
-  await db.runAsync('DELETE FROM links WHERE status = "completed"');
+  const links = await getAllLinks();
+  await saveAllLinks(links.filter((l) => l.status !== "completed"));
 };
 
 export const getLinksByNotificationId = async (
   notificationId: string,
 ): Promise<Link[]> => {
-  const links = await db.getAllAsync<Link>(
-    "SELECT * FROM links WHERE notification_id = ?",
-    [notificationId],
-  );
-  return links || [];
+  const links = await getAllLinks();
+  return links.filter((l) => l.notification_id === notificationId);
 };
 
 export const getSetting = async (key: string): Promise<string | null> => {
-  const setting = await db.getFirstAsync<Settings>(
-    "SELECT value FROM settings WHERE key = ?",
-    [key],
-  );
-  return setting?.value || null;
+  const json = await AsyncStorage.getItem(SETTINGS_KEY);
+  if (!json) return null;
+  const settings: Record<string, string> = JSON.parse(json);
+  return settings[key] || null;
 };
 
 export const setSetting = async (key: string, value: string): Promise<void> => {
-  await db.runAsync(
-    "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
-    [key, value],
-  );
+  const json = await AsyncStorage.getItem(SETTINGS_KEY);
+  const settings: Record<string, string> = json ? JSON.parse(json) : {};
+  settings[key] = value;
+  await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 };
 
 export const getPendingLinkCount = async (): Promise<number> => {
-  const result = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM links WHERE status = 'pending'`,
-  );
-  return result?.count || 0;
+  const links = await getAllLinks();
+  return links.filter((l) => l.status === "pending").length;
 };
 
 export const getLinksByReminderTime = async (
   startTime: number,
   endTime: number,
 ): Promise<Link[]> => {
-  const links = await db.getAllAsync<Link>(
-    `SELECT * FROM links 
-     WHERE status = 'pending' 
-     AND reminder_type != 'no_reminder'
-     AND reminder_time >= ? 
-     AND reminder_time <= ?`,
-    [startTime, endTime],
+  const links = await getAllLinks();
+  return links.filter(
+    (l) =>
+      l.status === "pending" &&
+      l.reminder_type !== "no_reminder" &&
+      l.reminder_time !== null &&
+      l.reminder_time >= startTime &&
+      l.reminder_time <= endTime,
   );
-  return links || [];
 };

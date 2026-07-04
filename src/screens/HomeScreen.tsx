@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,20 +8,19 @@ import {
   Platform,
   StatusBar,
   Animated,
+  Image,
+  TextInput,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
 import { useLinks } from "../hooks/useLinks";
+import { Link } from "../utils/database";
 import { LinksList } from "../components/LinksList";
 import { AddLinkModal } from "../components/AddLinkModal";
 import { ReminderPicker } from "../components/ReminderPicker";
-import { SettingsModal } from "../components/SettingsModal";
 import {
-  addLink as dbAddLink,
-  updateLinkReminder,
   getSetting,
-  setSetting,
 } from "../utils/database";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -31,11 +30,11 @@ import {
 } from "../utils/metadata";
 import { scheduleReminder, cancelReminder } from "../utils/notifications";
 import { getClipboardUrl } from "../utils/clipboard";
-import { Link } from "../utils/database";
 
 type TabType = "pending" | "completed";
 
 interface HomeScreenProps {
+  navigation?: any;
   route?: {
     params?: {
       addLinkUrl?: string;
@@ -43,39 +42,38 @@ interface HomeScreenProps {
   };
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
-  const { theme, isDark } = useTheme();
+export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, route }) => {
+  const { theme } = useTheme();
   const { showToast, showConfirm } = useToast();
   const {
     pendingLinks,
     completedLinks,
     loading,
-    loadLinks,
     addLink,
     updateReminder,
     markComplete,
-    updatePriority,
     deleteLink,
-    clearCompleted,
   } = useLinks();
 
   const [activeTab, setActiveTab] = useState<TabType>("pending");
   const [addLinkModalVisible, setAddLinkModalVisible] = useState(false);
   const [reminderPickerVisible, setReminderPickerVisible] = useState(false);
-  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
   const [selectedLinkForReminder, setSelectedLinkForReminder] =
     useState<Link | null>(null);
   const [defaultReminder, setDefaultReminder] = useState("no_reminder");
   const [weeklyDigestEnabled, setWeeklyDigestEnabled] = useState(true);
   const [fetchingMetadata, setFetchingMetadata] = useState(false);
   const [defaultUrl, setDefaultUrl] = useState<string>("");
+  const [bottomNavSelected, setBottomNavSelected] = useState("home");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
   const fabScale = useRef(new Animated.Value(1)).current;
+  const tabPillAnim = useRef(new Animated.Value(0)).current;
+  const searchInputRef = useRef<TextInput>(null);
 
   useFocusEffect(
-    React.useCallback(() => {
-      loadLinks();
+    useCallback(() => {
       checkClipboardOnMount();
     }, []),
   );
@@ -92,7 +90,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
   }, [route?.params?.addLinkUrl]);
 
   useEffect(() => {
-    Animated.spring(tabIndicatorAnim, {
+    Animated.spring(tabPillAnim, {
       toValue: activeTab === "pending" ? 0 : 1,
       tension: 80,
       friction: 12,
@@ -105,7 +103,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
       const defaultRem = await getSetting("default_reminder");
       const digestEnabled = await getSetting("weekly_digest_enabled");
       if (defaultRem) setDefaultReminder(defaultRem);
-      if (digestEnabled !== null) setWeeklyDigestEnabled(digestEnabled === "1");
+      if (digestEnabled !== null)
+        setWeeklyDigestEnabled(digestEnabled === "1");
     } catch (error) {
       console.error("Failed to load settings:", error);
     }
@@ -113,9 +112,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
 
   const checkClipboardOnMount = async () => {
     try {
-      const clipboardUrl = await getClipboardUrl();
-      if (clipboardUrl) {
-      }
+      await getClipboardUrl();
     } catch (error) {
       console.error("Failed to check clipboard:", error);
     }
@@ -130,9 +127,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         showToast({
           message: "Please enter a valid URL",
           type: "warning",
-          icon: "🔗",
         });
-        return;
+        throw new Error("Invalid URL");
       }
 
       const metadata = await fetchOpenGraphData(normalizedUrl);
@@ -143,12 +139,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         metadata.description,
         metadata.image,
         metadata.domain,
-        "normal"
+        "normal",
       );
 
       if (defaultReminder !== "no_reminder") {
         try {
-          const notificationId = await scheduleReminder(newLink, defaultReminder);
+          const notificationId = await scheduleReminder(
+            newLink,
+            defaultReminder,
+          );
           if (notificationId) {
             await updateReminder(
               newLink.id,
@@ -173,6 +172,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         message: "Failed to save link. Please try again.",
         type: "error",
       });
+      throw error;
     } finally {
       setFetchingMetadata(false);
     }
@@ -226,9 +226,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           reminderTime = customDate ? customDate.getTime() : Date.now();
         } catch (scheduleError: any) {
           showToast({
-            message: scheduleError?.message || "Cannot set reminder in the past.",
+            message:
+              scheduleError?.message || "Cannot set reminder in the past.",
             type: "warning",
-            icon: "⏰",
           });
           return;
         }
@@ -283,27 +283,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     });
   };
 
-  const handleClearCompleted = async () => {
-    try {
-      await clearCompleted();
-      showToast({
-        message: "Completed links cleared",
-        type: "success",
-      });
-    } catch (error) {
-      console.error("Error clearing completed:", error);
-      showToast({
-        message: "Failed to clear completed links",
-        type: "error",
-      });
-    }
-  };
-
-  const handleWeeklyDigestChange = async (value: boolean) => {
-    setWeeklyDigestEnabled(value);
-    await setSetting("weekly_digest_enabled", value ? "1" : "0");
-  };
-
   const handleFabPress = () => {
     Animated.sequence([
       Animated.spring(fabScale, {
@@ -322,88 +301,118 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
     setAddLinkModalVisible(true);
   };
 
-  const displayLinks = activeTab === "pending" ? pendingLinks : completedLinks;
-  const pendingCount = pendingLinks.length;
+  const filterLinks = (links: Link[]): Link[] => {
+    if (!Array.isArray(links)) return [];
+    if (!searchQuery.trim()) return links;
+    const q = searchQuery.toLowerCase().trim();
+    return links.filter(
+      (link) =>
+        link &&
+        ((link.title && link.title.toLowerCase().includes(q)) ||
+        link.url?.toLowerCase().includes(q)),
+    );
+  };
+
+  const displayLinks = filterLinks(
+    activeTab === "pending" ? pendingLinks : completedLinks,
+  );
+  const pendingCount = Array.isArray(pendingLinks) ? pendingLinks.length : 0;
+  const completedCount = Array.isArray(completedLinks) ? completedLinks.length : 0;
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: theme.surface,
-            borderColor: theme.border,
-          },
-        ]}
-      >
-        <View style={styles.headerLeft}>
-          <Text style={[styles.title, { color: theme.text }]}>Nudge</Text>
-          <View
-            style={[
-              styles.countBadge,
-              { backgroundColor: theme.primary },
-            ]}
-          >
-            <Text style={styles.countBadgeText}>{pendingCount}</Text>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
+
+      <View style={[styles.header, { backgroundColor: theme.warmCream }]}>
+        <Image
+          source={{
+            uri: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
+          }}
+          style={styles.headerBackground}
+          resizeMode="cover"
+        />
+        <View style={styles.headerOverlay} />
+        <View style={styles.headerContent}>
+          <View style={styles.headerLeft}>
+            <View style={styles.logoContainer}>
+              <Text style={styles.logoIcon}>🧡</Text>
+              <View>
+                <Text style={styles.title}>Nudge</Text>
+                <Text style={styles.subtitle}>Save now. Nudge later.</Text>
+              </View>
+            </View>
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              activeOpacity={0.7}
+              onPress={() => navigation?.navigate("Profile")}
+            >
+              <Ionicons name="person-outline" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
         </View>
-        <TouchableOpacity
-          onPress={() => setSettingsModalVisible(true)}
-          style={[
-            styles.settingsButton,
-            { backgroundColor: theme.surfaceElevated },
-          ]}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="settings-outline" size={20} color={theme.textSecondary} />
-        </TouchableOpacity>
+      </View>
+
+      <View style={[styles.searchContainer, { backgroundColor: theme.background }]}>
+        <View style={[styles.searchBar, { backgroundColor: theme.surface, borderColor: isSearchFocused ? theme.primary : theme.border }]}>
+          <Ionicons name="search-outline" size={18} color={theme.textSecondary} />
+          <TextInput
+            ref={searchInputRef}
+            style={[styles.searchInput, { color: theme.text }]}
+            placeholder="Search links..."
+            placeholderTextColor={theme.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setIsSearchFocused(false)}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSearchQuery("")}
+              activeOpacity={0.6}
+            >
+              <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <View
         style={[
-          styles.tabBar,
-          {
-            backgroundColor: theme.surface,
-            borderColor: theme.border,
-          },
+          styles.tabBarContainer,
+          { backgroundColor: theme.background },
         ]}
       >
-        <View style={styles.tabContainer}>
-          <Animated.View
-            style={[
-              styles.tabIndicator,
-              {
-                backgroundColor: theme.primary,
-                transform: [
-                  {
-                    translateX: tabIndicatorAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, 1],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          />
+        <View
+          style={[styles.tabBar, { backgroundColor: theme.surfaceElevated }]}
+        >
           <TouchableOpacity
             style={[
               styles.tab,
-              activeTab === "pending" && styles.tabActive,
+              activeTab === "pending" && [
+                styles.tabActive,
+                { backgroundColor: theme.primary },
+              ],
             ]}
             onPress={() => setActiveTab("pending")}
             activeOpacity={0.7}
           >
-            <Ionicons name="list-outline" size={18} color={activeTab === "pending" ? theme.primary : theme.tabInactive} style={styles.tabEmoji} />
             <Text
               style={[
                 styles.tabLabel,
                 {
                   color:
                     activeTab === "pending"
-                      ? theme.primary
-                      : theme.tabInactive,
+                      ? "#FFFFFF"
+                      : theme.textSecondary,
                   fontWeight: activeTab === "pending" ? "700" : "500",
                 },
               ]}
@@ -417,8 +426,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
                   {
                     backgroundColor:
                       activeTab === "pending"
-                        ? theme.primary
-                        : theme.tabInactive,
+                        ? "rgba(255,255,255,0.3)"
+                        : theme.primary,
                   },
                 ]}
               >
@@ -430,41 +439,48 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
           <TouchableOpacity
             style={[
               styles.tab,
-              activeTab === "completed" && styles.tabActive,
+              activeTab === "completed" && [
+                styles.tabActive,
+                { backgroundColor: theme.primary },
+              ],
             ]}
             onPress={() => setActiveTab("completed")}
             activeOpacity={0.7}
           >
-            <Ionicons name="checkmark-circle-outline" size={18} color={activeTab === "completed" ? theme.primary : theme.tabInactive} style={styles.tabEmoji} />
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={16}
+              color={
+                activeTab === "completed" ? "#FFFFFF" : theme.tabInactive
+              }
+            />
             <Text
               style={[
                 styles.tabLabel,
                 {
                   color:
                     activeTab === "completed"
-                      ? theme.primary
-                      : theme.tabInactive,
+                      ? "#FFFFFF"
+                      : theme.textSecondary,
                   fontWeight: activeTab === "completed" ? "700" : "500",
                 },
               ]}
             >
               Completed
             </Text>
-            {completedLinks.length > 0 && (
+            {completedCount > 0 && (
               <View
                 style={[
                   styles.tabCount,
                   {
                     backgroundColor:
                       activeTab === "completed"
-                        ? theme.primary
+                        ? "rgba(255,255,255,0.3)"
                         : theme.tabInactive,
                   },
                 ]}
               >
-                <Text style={styles.tabCountText}>
-                  {completedLinks.length}
-                </Text>
+                <Text style={styles.tabCountText}>{completedCount}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -479,7 +495,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         onSnooze={handleSnooze}
         onDelete={handleDeleteLink}
         emptyMessage={
-          activeTab === "pending" ? "No pending links" : "No completed links"
+          searchQuery
+            ? "No links match your search"
+            : activeTab === "pending"
+              ? "No pending links"
+              : "No completed links"
         }
         showCompleted={activeTab === "completed"}
       />
@@ -491,13 +511,119 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         ]}
       >
         <TouchableOpacity
-          style={[styles.fab, { backgroundColor: theme.primary }]}
+          style={[
+            styles.fab,
+            {
+              backgroundColor: theme.primary,
+              ...Platform.select({
+                ios: {
+                  shadowColor: theme.primary,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.35,
+                  shadowRadius: 12,
+                },
+                android: {
+                  elevation: 8,
+                },
+              }),
+            },
+          ]}
           onPress={handleFabPress}
           activeOpacity={0.85}
         >
-          <Ionicons name="add" size={32} color="#FFFFFF" />
+          <Ionicons name="add" size={28} color="#FFFFFF" />
         </TouchableOpacity>
       </Animated.View>
+
+      <View
+        style={[
+          styles.bottomNav,
+          {
+            backgroundColor: theme.surface,
+            borderTopColor: theme.border,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.bottomNavItem}
+          activeOpacity={0.7}
+          onPress={() => setBottomNavSelected("home")}
+        >
+          <Ionicons
+            name={bottomNavSelected === "home" ? "home" : "home-outline"}
+            size={22}
+            color={
+              bottomNavSelected === "home"
+                ? theme.primary
+                : theme.tabInactive
+            }
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.bottomNavItem}
+          activeOpacity={0.7}
+          onPress={() => {
+            setBottomNavSelected("stats");
+            navigation?.navigate("Stats");
+          }}
+        >
+          <Ionicons
+            name={
+              bottomNavSelected === "stats"
+                ? "bar-chart"
+                : "bar-chart-outline"
+            }
+            size={22}
+            color={
+              bottomNavSelected === "stats"
+                ? theme.primary
+                : theme.tabInactive
+            }
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.bottomNavItem}
+          activeOpacity={0.7}
+          onPress={() => {
+            setBottomNavSelected("settings");
+            navigation?.navigate("Settings");
+          }}
+        >
+          <Ionicons
+            name={
+              bottomNavSelected === "settings"
+                ? "settings"
+                : "settings-outline"
+            }
+            size={22}
+            color={
+              bottomNavSelected === "settings"
+                ? theme.primary
+                : theme.tabInactive
+            }
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.bottomNavItem}
+          activeOpacity={0.7}
+          onPress={() => {
+            setBottomNavSelected("profile");
+            navigation?.navigate("Profile");
+          }}
+        >
+          <Ionicons
+            name={
+              bottomNavSelected === "profile" ? "person" : "person-outline"
+            }
+            size={22}
+            color={
+              bottomNavSelected === "profile"
+                ? theme.primary
+                : theme.tabInactive
+            }
+          />
+        </TouchableOpacity>
+      </View>
 
       <AddLinkModal
         visible={addLinkModalVisible}
@@ -518,19 +644,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ route }) => {
         onSelect={handleReminderSelect}
         onClose={() => setReminderPickerVisible(false)}
       />
-
-      <SettingsModal
-        visible={settingsModalVisible}
-        onClose={() => setSettingsModalVisible(false)}
-        defaultReminder={defaultReminder}
-        onDefaultReminderChange={(value) => {
-          setDefaultReminder(value);
-          setSetting("default_reminder", value);
-        }}
-        weeklyDigestEnabled={weeklyDigestEnabled}
-        onWeeklyDigestChange={handleWeeklyDigestChange}
-        onClearCompleted={handleClearCompleted}
-      />
     </SafeAreaView>
   );
 };
@@ -540,120 +653,160 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    position: "relative",
+    paddingTop: Platform.OS === "ios" ? 44 : 48,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    overflow: "hidden",
+  },
+  headerBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  headerOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  headerContent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 48,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    zIndex: 1,
   },
   headerLeft: {
+    flex: 1,
+  },
+  logoContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
-  title: {
+  logoIcon: {
     fontSize: 28,
+  },
+  title: {
+    fontSize: 24,
     fontWeight: "800",
-    letterSpacing: -0.8,
-  },
-  countBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    minWidth: 24,
-    alignItems: "center",
-  },
-  countBadgeText: {
+    letterSpacing: -0.5,
     color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "800",
   },
-  settingsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  subtitle: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.8)",
+    marginTop: 2,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
   },
-  settingsButtonText: {
-    fontSize: 20,
+  avatarContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    overflow: "hidden",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.5)",
+  },
+  avatar: {
+    width: "100%",
+    height: "100%",
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    padding: 0,
+  },
+  tabBarContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   tabBar: {
-    borderBottomWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  tabContainer: {
     flexDirection: "row",
-    gap: 6,
-  },
-  tabIndicator: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    height: 3,
-    borderRadius: 1.5,
+    borderRadius: 25,
+    padding: 4,
   },
   tab: {
     flex: 1,
     flexDirection: "row",
     paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingHorizontal: 16,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
   },
-  tabActive: {
-  },
-  tabEmoji: {
-    fontSize: 14,
-  },
+  tabActive: {},
   tabLabel: {
-    fontSize: 13,
+    fontSize: 14,
     letterSpacing: 0.1,
   },
   tabCount: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 8,
-    minWidth: 20,
+    borderRadius: 10,
+    minWidth: 22,
     alignItems: "center",
   },
   tabCountText: {
     color: "#FFFFFF",
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "800",
   },
   fabContainer: {
     position: "absolute",
-    bottom: 24,
-    right: 24,
+    bottom: 76,
+    right: 20,
+    zIndex: 10,
   },
   fab: {
-    width: 58,
-    height: 58,
-    borderRadius: 18,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#6366F1",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.35,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
   },
-  fabText: {
-    fontSize: 30,
-    fontWeight: "300",
-    color: "#FFFFFF",
-    lineHeight: 34,
+  bottomNav: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingBottom: Platform.OS === "ios" ? 20 : 10,
+    borderTopWidth: 1,
+  },
+  bottomNavItem: {
+    padding: 10,
   },
 });
+
+export default HomeScreen;

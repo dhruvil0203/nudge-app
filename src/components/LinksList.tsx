@@ -1,15 +1,15 @@
-import React from "react";
+import React, { memo, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
-  SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 import { Link } from "../utils/database";
 import { LinkCard } from "./LinkCard";
+import { Ionicons } from "@expo/vector-icons";
 
 interface LinksListProps {
   links: Link[];
@@ -21,6 +21,8 @@ interface LinksListProps {
   emptyMessage?: string;
   showCompleted?: boolean;
 }
+
+const MemoizedLinkCard = memo(LinkCard);
 
 export const LinksList: React.FC<LinksListProps> = ({
   links,
@@ -34,50 +36,61 @@ export const LinksList: React.FC<LinksListProps> = ({
 }) => {
   const { theme } = useTheme();
 
-  const renderEmpty = () => (
+  const safeLinks = Array.isArray(links) ? links : [];
+
+  const renderEmpty = useCallback(() => (
     <View style={styles.emptyContainer}>
-      <Text style={[styles.emptyEmoji, styles.centerText]}>
-        {showCompleted ? "✅" : "📭"}
-      </Text>
+      <View style={[styles.emptyIconContainer, { backgroundColor: theme.warmPeach }]}>
+        <Ionicons
+          name={showCompleted ? "checkmark-done-outline" : "bookmark-outline"}
+          size={40}
+          color={theme.primary}
+        />
+      </View>
       <Text style={[styles.emptyMessage, { color: theme.text }]}>
         {emptyMessage}
       </Text>
       <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
         {showCompleted
-          ? "Once you mark links as done, they will appear here"
+          ? "Once you mark links as done, they'll show up here"
           : "Tap the + button to save your first link"}
       </Text>
     </View>
-  );
+  ), [theme, showCompleted, emptyMessage]);
 
-  const renderItem = ({ item }: { item: Link }) => (
-    <LinkCard
-      link={item}
-      onOpen={() => onLinkOpen?.(item)}
-      onMarkDone={() => onMarkDone?.(item)}
-      onSnooze={() => onSnooze?.(item)}
-      onDelete={() => onDelete?.(item)}
-      showCompleted={showCompleted}
-    />
-  );
+  const renderLoading = useCallback(() => (
+    <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+      <ActivityIndicator size="large" color={theme.primary} />
+      <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+        Loading your links...
+      </Text>
+    </View>
+  ), [theme]);
+
+  const renderItem = useCallback(({ item }: { item: Link }) => {
+    if (!item || !item.id) return null;
+    return (
+      <MemoizedLinkCard
+        link={item}
+        onOpen={() => onLinkOpen?.(item)}
+        onMarkDone={() => onMarkDone?.(item)}
+        onSnooze={() => onSnooze?.(item)}
+        onDelete={() => onDelete?.(item)}
+        showCompleted={showCompleted}
+      />
+    );
+  }, [onLinkOpen, onMarkDone, onSnooze, onDelete, showCompleted]);
+
+  const keyExtractor = useCallback((item: Link) => {
+    if (!item || !item.id) return String(Math.random());
+    return String(item.id);
+  }, []);
 
   if (loading) {
-    return (
-      <View
-        style={[
-          styles.loadingContainer,
-          { backgroundColor: theme.background },
-        ]}
-      >
-        <Text style={styles.loadingEmoji}>⏳</Text>
-        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-          Loading your links...
-        </Text>
-      </View>
-    );
+    return renderLoading();
   }
 
-  if (links.length === 0) {
+  if (safeLinks.length === 0) {
     return (
       <View
         style={[
@@ -92,15 +105,18 @@ export const LinksList: React.FC<LinksListProps> = ({
 
   return (
     <FlatList
-      data={links}
+      data={safeLinks}
       renderItem={renderItem}
-      keyExtractor={(item) => item.id.toString()}
+      keyExtractor={keyExtractor}
       contentContainerStyle={[
         styles.listContent,
         { backgroundColor: theme.background },
       ]}
       showsVerticalScrollIndicator={false}
       ListEmptyComponent={renderEmpty}
+      maxToRenderPerBatch={10}
+      windowSize={7}
+      initialNumToRender={8}
     />
   );
 };
@@ -112,11 +128,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  loadingEmoji: {
-    fontSize: 40,
-  },
   loadingText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "500",
   },
   emptyContainerFlex: {
@@ -128,18 +141,19 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 60,
+    paddingVertical: 80,
     paddingHorizontal: 32,
   },
-  centerText: {
-    textAlign: "center",
-  },
-  emptyEmoji: {
-    fontSize: 60,
-    marginBottom: 16,
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
   },
   emptyMessage: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
     marginBottom: 8,
     textAlign: "center",
@@ -149,9 +163,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     lineHeight: 20,
+    maxWidth: 260,
   },
   listContent: {
-    paddingVertical: 12,
-    paddingBottom: 80,
+    paddingVertical: 8,
+    paddingBottom: 100,
   },
 });

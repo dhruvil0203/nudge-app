@@ -14,10 +14,8 @@ import {
 import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
 import { Link } from "../utils/database";
-import {
-  EMPTY_IMAGE,
-  REMINDER_LABELS,
-} from "../constants";
+import { EMPTY_IMAGE } from "../constants";
+import { Ionicons } from "@expo/vector-icons";
 
 interface LinkCardProps {
   link: Link;
@@ -47,7 +45,12 @@ export const LinkCard: React.FC<LinkCardProps> = ({
   const snoozeScale = useRef(new Animated.Value(1)).current;
   const openScale = useRef(new Animated.Value(1)).current;
 
-  const animatePress = (anim: Animated.Value, onComplete?: () => void) => {
+  if (!link || !link.id) return null;
+
+  const animatePress = (
+    anim: Animated.Value,
+    onComplete?: () => void,
+  ) => {
     Animated.sequence([
       Animated.spring(anim, {
         toValue: 0.92,
@@ -67,15 +70,17 @@ export const LinkCard: React.FC<LinkCardProps> = ({
   const handleOpenLink = async () => {
     animatePress(openScale);
     try {
-      let urlToOpen = link.url;
+      let urlToOpen = link.url || "";
       if (!urlToOpen.match(/^https?:\/\//i)) {
         urlToOpen = `https://${urlToOpen}`;
       }
       await Linking.openURL(urlToOpen);
       onOpen?.();
     } catch (error) {
-      showToast({ message: "Unable to open this URL", type: "error", icon: "🔗" });
-      console.error("Error opening link:", error);
+      showToast({
+        message: "Unable to open this URL",
+        type: "error",
+      });
     }
   };
 
@@ -97,7 +102,8 @@ export const LinkCard: React.FC<LinkCardProps> = ({
     handleOpenLink();
   };
 
-  const imageSource = imageError || !link.image ? EMPTY_IMAGE : link.image;
+  const imageSource =
+    imageError || !link.image ? EMPTY_IMAGE : link.image;
 
   const createdDate = new Date(link.created_at);
   const now = new Date();
@@ -118,6 +124,23 @@ export const LinkCard: React.FC<LinkCardProps> = ({
     });
   }
 
+  const getDomainIcon = (domain: string) => {
+    if (domain?.includes("youtube")) return "logo-youtube";
+    if (domain?.includes("x.com") || domain?.includes("twitter"))
+      return "logo-twitter";
+    if (domain?.includes("instagram")) return "logo-instagram";
+    if (domain?.includes("github")) return "logo-github";
+    return "globe-outline";
+  };
+
+  const getDomainColor = (domain: string) => {
+    if (domain?.includes("youtube")) return "#FF0000";
+    if (domain?.includes("x.com") || domain?.includes("twitter"))
+      return "#1DA1F2";
+    if (domain?.includes("instagram")) return "#E4405F";
+    return theme.primary;
+  };
+
   return (
     <Animated.View style={{ transform: [{ scale: cardScale }] }}>
       <Pressable
@@ -129,108 +152,100 @@ export const LinkCard: React.FC<LinkCardProps> = ({
             borderColor: theme.border,
             ...Platform.select({
               ios: {
-                shadowColor: isDark ? "#000" : "#6366F1",
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: isDark ? 0.35 : 0.1,
-                shadowRadius: 16,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: isDark ? 0.25 : 0.08,
+                shadowRadius: 8,
               },
               android: {
-                elevation: isDark ? 6 : 4,
+                elevation: isDark ? 4 : 2,
               },
             }),
           },
         ]}
       >
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View>
+        <View style={styles.contentRow}>
+          <View
+            style={[
+              styles.imageContainer,
+              { backgroundColor: theme.surfaceElevated },
+            ]}
+          >
+            {imageLoading && (
+              <ActivityIndicator
+                size="small"
+                color={theme.primary}
+                style={styles.loader}
+              />
+            )}
+            <Image
+              source={{ uri: imageSource }}
+              style={styles.image}
+              onLoadEnd={() => setImageLoading(false)}
+              onError={() => {
+                setImageError(true);
+                setImageLoading(false);
+              }}
+            />
+          </View>
+
+          <View style={styles.textContent}>
+            <View style={styles.header}>
               <Text style={[styles.date, { color: theme.textSecondary }]}>
                 {timeAgo}
               </Text>
+              <TouchableOpacity activeOpacity={0.7}>
+                <Ionicons
+                  name="ellipsis-horizontal"
+                  size={16}
+                  color={theme.tabInactive}
+                />
+              </TouchableOpacity>
             </View>
-          </View>
-          <View style={styles.headerRight}>
-            {link.reminder_type !== "no_reminder" && (
-              <View
-                style={[
-                  styles.reminderBadge,
-                  {
-                    backgroundColor: isDark
-                      ? "rgba(129, 140, 248, 0.15)"
-                      : "rgba(99, 102, 241, 0.1)",
-                    borderColor: isDark
-                      ? "rgba(129, 140, 248, 0.25)"
-                      : "rgba(99, 102, 241, 0.15)",
-                  },
-                ]}
+
+            {link.title ? (
+              <Text
+                style={[styles.title, { color: theme.text }]}
+                numberOfLines={2}
               >
-                <Text style={[styles.reminderBadgeText, { color: theme.primary }]}>
-                  ⏰{" "}
-                  {REMINDER_LABELS[
-                    link.reminder_type as keyof typeof REMINDER_LABELS
-                  ] || "Reminder"}
+                {link.title}
+              </Text>
+            ) : (
+              <Text
+                style={[styles.title, { color: theme.text }]}
+                numberOfLines={2}
+              >
+                {link.url}
+              </Text>
+            )}
+
+            {link.title && (
+              <Text
+                style={[styles.url, { color: theme.textSecondary }]}
+                numberOfLines={1}
+              >
+                {link.url}
+              </Text>
+            )}
+
+            {link.domain && (
+              <View style={styles.domainRow}>
+                <Ionicons
+                  name={getDomainIcon(link.domain) as any}
+                  size={12}
+                  color={getDomainColor(link.domain)}
+                />
+                <Text
+                  style={[
+                    styles.domain,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  {link.domain}
                 </Text>
               </View>
             )}
           </View>
-        </View>
-
-        <View
-          style={[styles.imageContainer, { backgroundColor: theme.surfaceElevated }]}
-        >
-          {imageLoading && (
-            <ActivityIndicator
-              size="large"
-              color={theme.primary}
-              style={styles.loader}
-            />
-          )}
-          <Image
-            source={{ uri: imageSource }}
-            style={styles.image}
-            onLoadEnd={() => setImageLoading(false)}
-            onError={() => {
-              setImageError(true);
-              setImageLoading(false);
-            }}
-          />
-          <View style={styles.imageOverlay} />
-          {link.domain && (
-            <View
-              style={[
-                styles.domainChip,
-                {
-                  backgroundColor: isDark
-                    ? "rgba(0, 0, 0, 0.7)"
-                    : "rgba(0, 0, 0, 0.55)",
-                },
-              ]}
-            >
-              <View style={[styles.domainDot, { backgroundColor: theme.primary }]} />
-              <Text style={styles.domainChipText} numberOfLines={1}>
-                {link.domain}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.content}>
-          {link.title && (
-            <Text
-              style={[styles.title, { color: theme.text }]}
-              numberOfLines={2}
-            >
-              {link.title}
-            </Text>
-          )}
-          {link.description && (
-            <Text
-              style={[styles.description, { color: theme.textSecondary }]}
-              numberOfLines={2}
-            >
-              {link.description}
-            </Text>
-          )}
         </View>
 
         <View
@@ -239,111 +254,163 @@ export const LinkCard: React.FC<LinkCardProps> = ({
             { borderTopColor: theme.border },
           ]}
         >
-          <Animated.View style={[styles.actionFlex, { transform: [{ scale: openScale }] }]}>
-            <TouchableOpacity
-              style={[
-                styles.actionButtonPrimary,
-                {
-                  backgroundColor: theme.primary,
-                  ...Platform.select({
-                    ios: {
-                      shadowColor: theme.primary,
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.3,
-                      shadowRadius: 4,
+          {!showCompleted && (
+            <>
+              <Animated.View
+                style={[
+                  styles.actionFlex,
+                  { transform: [{ scale: openScale }] },
+                ]}
+              >
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton,
+                    { backgroundColor: theme.surfaceElevated },
+                  ]}
+                  onPress={handleOpenLink}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="open-outline"
+                    size={16}
+                    color={theme.textSecondary}
+                  />
+                  <Text
+                    style={[
+                      styles.actionText,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    Open
+                  </Text>
+                </TouchableOpacity>
+              </Animated.View>
+
+              {onMarkDone && (
+                <Animated.View
+                  style={[
+                    styles.actionFlex,
+                    { transform: [{ scale: doneScale }] },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      { backgroundColor: theme.success },
+                    ]}
+                    onPress={() => animatePress(doneScale, onMarkDone)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name="checkmark"
+                      size={16}
+                      color="#FFFFFF"
+                    />
+                    <Text style={[styles.actionText, { color: "#FFFFFF" }]}>
+                      Done
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              )}
+
+              {onSnooze && (
+                <Animated.View
+                  style={[
+                    styles.actionFlex,
+                    { transform: [{ scale: snoozeScale }] },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      { backgroundColor: theme.warmPeach },
+                    ]}
+                    onPress={() => animatePress(snoozeScale, onSnooze)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name="notifications-outline"
+                      size={16}
+                      color={theme.primary}
+                    />
+                  </TouchableOpacity>
+                </Animated.View>
+              )}
+
+              {onDelete && (
+                <Animated.View
+                  style={{
+                    transform: [{ scale: deleteScale }],
+                  }}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.deleteButton,
+                      {
+                        backgroundColor: isDark
+                          ? "rgba(239, 68, 68, 0.1)"
+                          : "rgba(239, 68, 68, 0.06)",
+                      },
+                    ]}
+                    onPress={() => animatePress(deleteScale, onDelete)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name="trash-outline"
+                      size={16}
+                      color={theme.error}
+                    />
+                  </TouchableOpacity>
+                </Animated.View>
+              )}
+            </>
+          )}
+
+          {showCompleted && (
+            <View style={styles.completedActions}>
+              <TouchableOpacity
+                style={[
+                  styles.openButton,
+                  { backgroundColor: theme.surfaceElevated },
+                ]}
+                onPress={handleOpenLink}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="open-outline"
+                  size={16}
+                  color={theme.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.openButtonText,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  Open
+                </Text>
+              </TouchableOpacity>
+              {onDelete && (
+                <TouchableOpacity
+                  style={[
+                    styles.deleteIconButton,
+                    {
+                      backgroundColor: isDark
+                        ? "rgba(239, 68, 68, 0.1)"
+                        : "rgba(239, 68, 68, 0.06)",
                     },
-                    android: { elevation: 2 },
-                  }),
-                },
-              ]}
-              onPress={handleOpenLink}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.actionEmoji}>🔗</Text>
-              <Text style={styles.actionButtonPrimaryText}>Open</Text>
-            </TouchableOpacity>
-          </Animated.View>
-
-          {!showCompleted && onMarkDone && (
-            <Animated.View style={[styles.actionFlex, { transform: [{ scale: doneScale }] }]}>
-              <TouchableOpacity
-                style={[
-                  styles.actionButtonPrimary,
-                  {
-                    backgroundColor: theme.success,
-                    ...Platform.select({
-                      ios: {
-                        shadowColor: theme.success,
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 4,
-                      },
-                      android: { elevation: 2 },
-                    }),
-                  },
-                ]}
-                onPress={() => animatePress(doneScale, onMarkDone)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.actionEmoji}>✓</Text>
-                <Text style={styles.actionButtonPrimaryText}>Done</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          )}
-
-          {!showCompleted && onSnooze && (
-            <Animated.View style={{ transform: [{ scale: snoozeScale }] }}>
-              <TouchableOpacity
-                style={[
-                  styles.actionButtonCircle,
-                  {
-                    backgroundColor: isDark
-                      ? "rgba(251, 191, 36, 0.15)"
-                      : "rgba(245, 158, 11, 0.12)",
-                    borderColor: isDark
-                      ? "rgba(251, 191, 36, 0.3)"
-                      : "rgba(245, 158, 11, 0.2)",
-                  },
-                ]}
-                onPress={() => animatePress(snoozeScale, onSnooze)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.circleEmoji}>⏰</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          )}
-
-          {onDelete && (
-            <Animated.View style={{ transform: [{ scale: deleteScale }] }}>
-              <TouchableOpacity
-                style={[
-                  styles.deleteButton,
-                  {
-                    backgroundColor: isDark
-                      ? "rgba(100, 116, 139, 0.25)"
-                      : "rgba(100, 116, 139, 0.12)",
-                    borderColor: isDark
-                      ? "#64748B"
-                      : "#64748B",
-                    ...Platform.select({
-                      ios: {
-                        shadowColor: "#64748B",
-                        shadowOffset: { width: 0, height: 0 },
-                        shadowOpacity: isDark ? 0.7 : 0.35,
-                        shadowRadius: 10,
-                      },
-                      android: {
-                        elevation: 4,
-                      },
-                    }),
-                  },
-                ]}
-                onPress={() => animatePress(deleteScale, onDelete)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.deleteIcon}>🗑</Text>
-              </TouchableOpacity>
-            </Animated.View>
+                  ]}
+                  onPress={() => animatePress(deleteScale, onDelete)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="trash-outline"
+                    size={16}
+                    color={theme.error}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
           )}
         </View>
       </Pressable>
@@ -353,65 +420,24 @@ export const LinkCard: React.FC<LinkCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 20,
-    marginBottom: 18,
+    borderRadius: 16,
+    marginBottom: 12,
     marginHorizontal: 16,
     borderWidth: 1,
     overflow: "hidden",
   },
-  header: {
+  contentRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    padding: 12,
+    gap: 12,
   },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flex: 1,
-  },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  priorityBadge: {
-    width: 36,
-    height: 36,
+  imageContainer: {
+    width: 80,
+    height: 80,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-  },
-  priorityIcon: {
-    fontSize: 16,
-  },
-  priorityLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 0.2,
-  },
-  date: {
-    fontSize: 11,
-    fontWeight: "500",
-    marginTop: 2,
-    letterSpacing: 0.1,
-  },
-  reminderBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  reminderBadgeText: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  imageContainer: {
-    height: 180,
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
+    overflow: "hidden",
   },
   loader: {
     position: "absolute",
@@ -422,51 +448,38 @@ const styles = StyleSheet.create({
     height: "100%",
     resizeMode: "cover",
   },
-  imageOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 60,
-    backgroundColor: "transparent",
+  textContent: {
+    flex: 1,
+    justifyContent: "space-between",
   },
-  domainChip: {
-    position: "absolute",
-    bottom: 10,
-    left: 12,
+  header: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-    gap: 6,
   },
-  domainDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  domainChipText: {
+  date: {
     fontSize: 11,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    maxWidth: 180,
-  },
-  content: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 12,
+    fontWeight: "500",
   },
   title: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "700",
-    marginBottom: 6,
-    lineHeight: 22,
-    letterSpacing: -0.2,
+    lineHeight: 20,
+    marginTop: 4,
   },
-  description: {
-    fontSize: 13,
-    lineHeight: 19,
+  url: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  domainRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 4,
+  },
+  domain: {
+    fontSize: 11,
+    fontWeight: "500",
   },
   actions: {
     flexDirection: "row",
@@ -479,43 +492,48 @@ const styles = StyleSheet.create({
   actionFlex: {
     flex: 1,
   },
-  actionButtonPrimary: {
+  actionButton: {
     flexDirection: "row",
-    paddingVertical: 11,
-    borderRadius: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
     gap: 6,
   },
-  actionEmoji: {
+  actionText: {
     fontSize: 13,
-  },
-  actionButtonPrimaryText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 13,
-    letterSpacing: 0.2,
-  },
-  actionButtonCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-  },
-  circleEmoji: {
-    fontSize: 17,
+    fontWeight: "600",
   },
   deleteButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1.5,
   },
-  deleteIcon: {
-    fontSize: 19,
+  completedActions: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 8,
+  },
+  openButton: {
+    flex: 1,
+    flexDirection: "row",
+    paddingVertical: 10,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+  },
+  openButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  deleteIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

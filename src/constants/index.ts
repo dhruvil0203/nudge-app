@@ -15,7 +15,7 @@ export const PRIORITY_LEVELS = {
 
 export const PRIORITY_COLORS = {
   important: '#14B8A6',
-  normal: '#7C3AED',
+  normal: '#D4845A',
   someday: '#8E8E93',
 };
 

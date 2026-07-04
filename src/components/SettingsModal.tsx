@@ -9,6 +9,7 @@ import {
   ScrollView,
   Switch,
   Platform,
+  Image,
 } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
@@ -55,18 +56,46 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       <SafeAreaView
         style={[styles.container, { backgroundColor: theme.background }]}
       >
+        <View style={styles.headerImageContainer}>
+          <Image
+            source={{
+              uri: "https://images.unsplash.com/photo-1490750967868-88aa4f44baee?w=800&q=80",
+            }}
+            style={styles.headerImage}
+            resizeMode="cover"
+          />
+          <View
+            style={[
+              styles.headerImageOverlay,
+              {
+                backgroundColor: isDark
+                  ? "rgba(26, 20, 18, 0.85)"
+                  : "rgba(251, 247, 244, 0.85)",
+              },
+            ]}
+          />
+          <View style={styles.headerContent}>
+            <Text
+              style={[
+                styles.headerTitle,
+                { color: isDark ? "#F5EDE8" : "#3D2E22" },
+              ]}
+            >
+              Settings
+            </Text>
+          </View>
+        </View>
+
         <View
           style={[
-            styles.header,
+            styles.headerBar,
             {
               backgroundColor: theme.surface,
               borderBottomColor: theme.border,
             },
           ]}
         >
-          <View style={styles.titleRow}>
-            <Text style={[styles.title, { color: theme.text }]}>Settings</Text>
-          </View>
+          <View style={styles.headerLeft} />
           <TouchableOpacity
             onPress={onClose}
             style={[
@@ -75,9 +104,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             ]}
             activeOpacity={0.7}
           >
-            <Text style={[styles.closeButton, { color: theme.primary }]}>
-              Done
-            </Text>
+            <Ionicons
+              name="close"
+              size={18}
+              color={theme.textSecondary}
+            />
           </TouchableOpacity>
         </View>
 
@@ -87,17 +118,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           contentContainerStyle={styles.contentInner}
         >
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text
-                style={[styles.sectionTitle, { color: theme.textSecondary }]}
-              >
-                Appearance
-              </Text>
-            </View>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: theme.textSecondary },
+              ]}
+            >
+              Appearance
+            </Text>
             <View
               style={[
                 styles.card,
-                { backgroundColor: theme.surface, borderColor: theme.border },
+                {
+                  backgroundColor: theme.surface,
+                  borderColor: theme.border,
+                },
               ]}
             >
               <View style={styles.settingRow}>
@@ -105,20 +140,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <View
                     style={[
                       styles.settingIconContainer,
-                      { backgroundColor: theme.surfaceElevated },
+                      { backgroundColor: theme.warmPeach },
                     ]}
                   >
-                    <Ionicons 
-                      name={isDark ? "moon" : "sunny"} 
-                      size={20} 
-                      color={theme.textSecondary} 
+                    <Ionicons
+                      name={isDark ? "moon" : "sunny"}
+                      size={20}
+                      color={theme.primary}
                     />
                   </View>
                   <View>
                     <Text
-                      style={[styles.settingLabel, { color: theme.text }]}
+                      style={[
+                        styles.settingLabel,
+                        { color: theme.text },
+                      ]}
                     >
-                      Dark Mode
+                      Theme
                     </Text>
                     <Text
                       style={[
@@ -126,7 +164,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         { color: theme.textSecondary },
                       ]}
                     >
-                      {isDark ? "Currently dark" : "Currently light"}
+                      {isDark ? "Dark Mode" : "Cozy Latte"}
                     </Text>
                   </View>
                 </View>
@@ -134,27 +172,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   value={isDark}
                   onValueChange={toggleTheme}
                   trackColor={{
-                    false: theme.border,
-                    true: theme.primary,
+                    false: theme.tabInactive + "40",
+                    true: theme.primary + "60",
                   }}
-                  thumbColor="#FFFFFF"
+                  thumbColor={isDark ? theme.primary : "#FFFFFF"}
                 />
               </View>
             </View>
           </View>
 
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text
-                style={[styles.sectionTitle, { color: theme.textSecondary }]}
-              >
-                Notifications
-              </Text>
-            </View>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: theme.textSecondary },
+              ]}
+            >
+              Notifications
+            </Text>
             <View
               style={[
                 styles.card,
-                { backgroundColor: theme.surface, borderColor: theme.border },
+                {
+                  backgroundColor: theme.surface,
+                  borderColor: theme.border,
+                },
               ]}
             >
               <View style={styles.settingRow}>
@@ -162,14 +204,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <View
                     style={[
                       styles.settingIconContainer,
-                      { backgroundColor: theme.surfaceElevated },
+                      { backgroundColor: theme.warmPeach },
                     ]}
                   >
-                    <Ionicons name="mail" size={20} color={theme.textSecondary} />
+                    <Ionicons
+                      name="chatbubble-outline"
+                      size={20}
+                      color={theme.primary}
+                    />
                   </View>
                   <View>
                     <Text
-                      style={[styles.settingLabel, { color: theme.text }]}
+                      style={[
+                        styles.settingLabel,
+                        { color: theme.text },
+                      ]}
                     >
                       Weekly Digest
                     </Text>
@@ -187,84 +236,115 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   value={weeklyDigestEnabled}
                   onValueChange={onWeeklyDigestChange}
                   trackColor={{
-                    false: theme.border,
-                    true: theme.primary,
+                    false: theme.tabInactive + "40",
+                    true: theme.primary + "60",
                   }}
-                  thumbColor="#FFFFFF"
+                  thumbColor={
+                    weeklyDigestEnabled ? theme.primary : "#FFFFFF"
+                  }
                 />
               </View>
             </View>
           </View>
 
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text
-                style={[styles.sectionTitle, { color: theme.textSecondary }]}
-              >
-                Data Management
-              </Text>
-            </View>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: theme.textSecondary },
+              ]}
+            >
+              Data Management
+            </Text>
             <TouchableOpacity
               style={[
-                styles.dangerCard,
+                styles.card,
                 {
-                  backgroundColor: isDark
-                    ? 'rgba(248, 113, 113, 0.12)'
-                    : 'rgba(239, 68, 68, 0.08)',
-                  borderColor: theme.error,
+                  backgroundColor: theme.surface,
+                  borderColor: theme.border,
                 },
               ]}
               onPress={handleClearCompleted}
               disabled={isClearing}
               activeOpacity={0.7}
             >
-              <View style={styles.settingLeft}>
-                <View
-                  style={[
-                    styles.settingIconContainer,
-                    { backgroundColor: theme.error },
-                  ]}
-                >
-                  <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
-                </View>
-                <View>
-                  <Text style={[styles.dangerLabel, { color: theme.error }]}>
-                    {isClearing
-                      ? "Clearing..."
-                      : "Clear Completed Links"}
-                  </Text>
-                  <Text
+              <View style={styles.settingRow}>
+                <View style={styles.settingLeft}>
+                  <View
                     style={[
-                      styles.settingDescription,
-                      { color: theme.textSecondary },
+                      styles.settingIconContainer,
+                      {
+                        backgroundColor: isDark
+                          ? "rgba(239, 68, 68, 0.15)"
+                          : "rgba(220, 38, 38, 0.08)",
+                      },
                     ]}
                   >
-                    This action cannot be undone
-                  </Text>
+                    <Ionicons
+                      name="trash-outline"
+                      size={20}
+                      color={theme.error}
+                    />
+                  </View>
+                  <View>
+                    <Text
+                      style={[
+                        styles.settingLabel,
+                        { color: theme.error },
+                      ]}
+                    >
+                      {isClearing
+                        ? "Clearing..."
+                        : "Clear Completed Links"}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.settingDescription,
+                        { color: theme.error },
+                      ]}
+                    >
+                      This action cannot be undone
+                    </Text>
+                  </View>
                 </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={theme.tabInactive}
+                />
               </View>
             </TouchableOpacity>
           </View>
 
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text
-                style={[styles.sectionTitle, { color: theme.textSecondary }]}
-              >
-                About
-              </Text>
-            </View>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: theme.textSecondary },
+              ]}
+            >
+              About
+            </Text>
             <View
               style={[
                 styles.aboutCard,
-                { backgroundColor: theme.surface, borderColor: theme.border },
+                {
+                  backgroundColor: theme.surface,
+                  borderColor: theme.border,
+                },
               ]}
             >
-              <Text style={[styles.appName, { color: theme.text }]}>
+              <Text style={styles.aboutHeart}>🧡</Text>
+              <Text
+                style={[styles.appName, { color: theme.text }]}
+              >
                 Nudge
               </Text>
               <Text
-                style={[styles.appVersion, { color: theme.primary }]}
+                style={[
+                  styles.appVersion,
+                  { color: theme.primary },
+                ]}
               >
                 Version 1.0.0
               </Text>
@@ -280,8 +360,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   { color: theme.textSecondary },
                 ]}
               >
-                A universal link saving and reminder tool.{"\n"}All data is
-                stored locally on your device.
+                A universal link saving and reminder tool.{"\n"}All
+                data is stored locally on your device.
               </Text>
             </View>
           </View>
@@ -295,36 +375,48 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  headerImageContainer: {
+    height: 160,
+    position: "relative",
+  },
+  headerImage: {
+    width: "100%",
+    height: "100%",
+  },
+  headerImageOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+  },
+  headerContent: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+  },
+  headerBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
   },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  titleIcon: {
-    fontSize: 20,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    letterSpacing: -0.3,
+  headerLeft: {
+    width: 36,
   },
   doneButtonWrapper: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 16,
-  },
-  closeButton: {
-    fontSize: 14,
-    fontWeight: "700",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
   },
   content: {
     flex: 1,
@@ -336,21 +428,13 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 28,
   },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 12,
-    marginLeft: 4,
-  },
-  sectionIcon: {
-    fontSize: 14,
-  },
   sectionTitle: {
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.8,
+    marginBottom: 12,
+    marginLeft: 4,
   },
   card: {
     borderRadius: 14,
@@ -371,14 +455,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   settingIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-  },
-  settingIcon: {
-    fontSize: 16,
   },
   settingLabel: {
     fontSize: 15,
@@ -389,24 +470,18 @@ const styles = StyleSheet.create({
     marginTop: 2,
     lineHeight: 16,
   },
-  dangerCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  dangerLabel: {
-    fontSize: 15,
-    fontWeight: "700",
-  },
   aboutCard: {
     borderRadius: 14,
     borderWidth: 1,
-    padding: 18,
+    padding: 24,
     alignItems: "center",
   },
+  aboutHeart: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
   appName: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "800",
     letterSpacing: -0.5,
   },
@@ -418,7 +493,7 @@ const styles = StyleSheet.create({
   aboutDivider: {
     height: 1,
     width: "80%",
-    marginVertical: 14,
+    marginVertical: 16,
   },
   aboutDescription: {
     fontSize: 13,

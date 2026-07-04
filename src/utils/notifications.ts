@@ -111,7 +111,7 @@ const buildTrigger = (targetDate: Date): any => {
 
   const trigger: any = {
     type: "date",
-    date: targetDate.getTime(),
+    date: targetDate,
   };
 
   if (Platform.OS === "android") {
