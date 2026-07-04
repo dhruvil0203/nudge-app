@@ -9,6 +9,7 @@ import {
   Switch,
   Platform,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
 import { useLinks } from "../hooks/useLinks";
@@ -22,6 +23,7 @@ interface SettingsScreenProps {
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
   const { theme, isDark, toggleTheme } = useTheme();
   const { showConfirm, showToast } = useToast();
+  const insets = useSafeAreaInsets();
   const { clearCompleted } = useLinks();
   const [weeklyDigestEnabled, setWeeklyDigestEnabled] = useState(true);
   const [defaultReminder, setDefaultReminder] = useState("no_reminder");
@@ -75,6 +77,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           {
             backgroundColor: theme.surface,
             borderBottomColor: theme.border,
+            paddingTop: insets.top + 8,
           },
         ]}
       >

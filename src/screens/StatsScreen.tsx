@@ -9,6 +9,7 @@ import {
   Animated,
   Platform,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
 import { useLinks } from "../hooks/useLinks";
@@ -21,6 +22,7 @@ interface StatsScreenProps {
 export const StatsScreen: React.FC<StatsScreenProps> = ({ navigation }) => {
   const { theme, isDark } = useTheme();
   const { pendingLinks, completedLinks } = useLinks();
+  const insets = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useFocusEffect(
@@ -360,6 +362,7 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ navigation }) => {
           {
             backgroundColor: theme.surface,
             borderBottomColor: theme.border,
+            paddingTop: insets.top + 8,
           },
         ]}
       >

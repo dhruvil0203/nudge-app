@@ -15,6 +15,7 @@ import {
   Modal,
   StatusBar,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
@@ -31,6 +32,7 @@ interface ProfileScreenProps {
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const { theme, isDark } = useTheme();
   const { showToast, showConfirm } = useToast();
+  const insets = useSafeAreaInsets();
   const { profile, isLoading: profileLoading, createProfile, updateProfile, deleteProfile } = useProfile();
   const { pendingLinks, completedLinks } = useLinks();
 
@@ -201,7 +203,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   if (!profile && !isEditing) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
           <TouchableOpacity
             onPress={() => navigation?.goBack()}
             style={[styles.backButton, { backgroundColor: theme.surfaceElevated }]}
@@ -238,7 +240,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity
           onPress={() => navigation?.goBack()}
           style={[styles.backButton, { backgroundColor: theme.surfaceElevated }]}

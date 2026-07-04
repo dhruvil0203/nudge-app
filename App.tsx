@@ -10,6 +10,7 @@ import { ToastProvider } from './src/context/ToastContext';
 import { ProfileProvider } from './src/context/ProfileContext';
 import { useTheme } from './src/context/ThemeContext';
 import { initDatabase } from './src/utils/database';
+import { initializeNotifications } from './src/utils/notifications';
 import { LinksProvider } from './src/hooks/useLinks';
 import HomeScreen from './src/screens/HomeScreen';
 import StatsScreen from './src/screens/StatsScreen';
@@ -122,7 +123,10 @@ function AppContent() {
 
   useEffect(() => {
     initDatabase()
-      .then(() => setDbReady(true))
+      .then(() => {
+        setDbReady(true);
+        initializeNotifications().catch(() => {});
+      })
       .catch((err) => {
         console.error('Database init failed:', err);
         setDbReady(true);
