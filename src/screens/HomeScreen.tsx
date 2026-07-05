@@ -4,13 +4,13 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   Platform,
   StatusBar,
   Animated,
   Image,
   TextInput,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
@@ -45,6 +45,7 @@ interface HomeScreenProps {
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, route }) => {
   const { theme } = useTheme();
   const { showToast, showConfirm } = useToast();
+  const insets = useSafeAreaInsets();
   const {
     pendingLinks,
     completedLinks,
@@ -321,6 +322,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, route }) => 
 
   return (
     <SafeAreaView
+      edges={["bottom"]}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
       <StatusBar
@@ -338,7 +340,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, route }) => 
           resizeMode="cover"
         />
         <View style={styles.headerOverlay} />
-        <View style={styles.headerContent}>
+        <View style={[styles.headerContent, { paddingTop: insets.top + 8 }]}>
           <View style={styles.headerLeft}>
             <View style={styles.logoContainer}>
               <Text style={styles.logoIcon}>🧡</Text>
@@ -507,7 +509,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, route }) => 
       <Animated.View
         style={[
           styles.fabContainer,
-          { transform: [{ scale: fabScale }] },
+          { bottom: 96, transform: [{ scale: fabScale }] },
         ]}
       >
         <TouchableOpacity
@@ -654,10 +656,7 @@ const styles = StyleSheet.create({
   },
   header: {
     position: "relative",
-    paddingTop: Platform.OS === "ios" ? 44 : 48,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    overflow: "hidden",
+    minHeight: 160,
   },
   headerBackground: {
     position: "absolute",
@@ -675,10 +674,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.35)",
   },
   headerContent: {
+    flex: 1,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     zIndex: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
   },
   headerLeft: {
     flex: 1,
@@ -785,7 +787,6 @@ const styles = StyleSheet.create({
   },
   fabContainer: {
     position: "absolute",
-    bottom: 76,
     right: 20,
     zIndex: 10,
   },
@@ -801,7 +802,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     alignItems: "center",
     paddingVertical: 10,
-    paddingBottom: Platform.OS === "ios" ? 20 : 10,
     borderTopWidth: 1,
   },
   bottomNavItem: {
