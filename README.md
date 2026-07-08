@@ -2,6 +2,12 @@
 
 A React Native mobile app built with Expo that allows you to save links from any app, set reminders, and stay organized.
 
+## 📸 App Preview
+
+<p align="center">
+  <img src="assets/home-image.jpeg" alt="Nudge App Home Screen" width="300"/>
+</p>
+
 ## Features
 
 ✨ **Link Management**
