@@ -140,89 +140,27 @@ Nudge/
 - **axios**: HTTP client for metadata fetching
 - **react-native-receive-sharing-intent**: Share Sheet integration
 
-## Database Schema
+## Error Handling & Resilience
 
-### Links Table
+The app handles runtime scenarios gracefully to ensure a robust user experience:
 
-```sql
-CREATE TABLE links (
-  id INTEGER PRIMARY KEY,
-  url TEXT NOT NULL,
-  title TEXT,
-  description TEXT,
-  image TEXT,
-  domain TEXT,
-  priority TEXT DEFAULT 'normal',
-  status TEXT DEFAULT 'pending',
-  reminder_type TEXT DEFAULT 'no_reminder',
-  reminder_time INTEGER,
-  notification_id TEXT,
-  created_at INTEGER,
-  completed_at INTEGER,
-  updated_at INTEGER
-);
-```
+- **Network Failures**: Offline fallback allows link saving even when metadata fetching fails.
+- **Invalid Input**: Built-in URL validation and auto-protocol normalization.
+- **System Permissions**: Graceful fallback handles notification and clipboard permission denials.
 
-### Settings Table
 
-```sql
-CREATE TABLE settings (
-  key TEXT PRIMARY KEY,
-  value TEXT
-);
-```
+## ⚙️ Architecture & System Design
 
-## API Reference
+### 📶 Offline-First Design
+Nudge is built to work completely offline without relying on external cloud servers:
+- **Local Database**: All user data, settings, and links are stored locally on the device using `expo-sqlite`.
+- **Local Notifications**: Reminder scheduling uses `expo-notifications` directly on the operating system level.
+- **Native Sharing**: Share sheet integration connects directly with the native iOS/Android sharing mechanics.
 
-### Database Operations
-
-- `addLink()` - Add a new link
-- `updateLinkReminder()` - Set or update reminder
-- `markLinkComplete()` - Move link to completed
-- `updateLinkPriority()` - Change link priority
-- `getPendingLinks()` - Get all pending links
-- `getCompletedLinks()` - Get all completed links
-- `clearCompletedLinks()` - Delete all completed links
-
-### Metadata Fetching
-
-- `fetchOpenGraphData()` - Fetch OG metadata from URL
-- `isValidUrl()` - Validate URL format
-- `normalizeUrl()` - Add protocol if missing
-
-### Notifications
-
-- `scheduleReminder()` - Schedule push notification
-- `cancelReminder()` - Cancel scheduled notification
-- `scheduleWeeklyDigest()` - Schedule weekly digest
-
-## Error Handling
-
-The app gracefully handles:
-
-- Network failures during metadata fetching
-- Invalid URLs
-- Missing Open Graph metadata
-- Notification permission denials
-- Database errors
-
-If metadata fetching fails, the link is still saved with just the URL.
-
-## Offline Functionality
-
-Nudge works completely offline:
-
-- All data is stored locally using SQLite
-- Notifications are local, not push notifications from a server
-- Share Sheet integration uses native APIs
-- No internet connection required for core functionality
-
-## Performance Optimization
-
-- Links are fetched with a 5-second timeout
-- Image loading is optimized with placeholder fallbacks
-- Database queries are indexed for fast lookups
-- Notifications use native scheduling
+### ⚡ Performance & Optimization
+- **Optimized Network Fetching**: Open Graph metadata fetching is limited by a 5-second timeout to prevent lag.
+- **Cached Asset Fallbacks**: Fast image loading with local placeholder fallbacks for custom/missing OG images.
+- **Efficient DB Operations**: SQLite queries are optimized and indexed to ensure minimal query latency.
 
 ## Future Enhancements
 
