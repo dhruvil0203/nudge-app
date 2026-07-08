@@ -4,9 +4,7 @@ A React Native mobile app built with Expo that allows you to save links from any
 
 ## 📸 App Preview
 
-<p align="center">
-  <img src="assets/home-image.jpeg" alt="Nudge App Home Screen" width="300"/>
-</p>
+<img src="assets/home-image.jpeg" alt="Nudge App Home Screen" width="300"/>
 
 ## Features
 
