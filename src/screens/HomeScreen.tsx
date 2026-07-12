@@ -15,7 +15,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
 import { useLinks } from "../hooks/useLinks";
-import { Link } from "../utils/database";
+import type { Link } from "../types";
 import { LinksList } from "../components/LinksList";
 import { AddLinkModal } from "../components/AddLinkModal";
 import { ReminderPicker } from "../components/ReminderPicker";
@@ -30,9 +30,11 @@ import {
 } from "../utils/metadata";
 import { scheduleReminder, cancelReminder } from "../utils/notifications";
 import { getClipboardUrl } from "../utils/clipboard";
+import { useConnectivity } from "../hooks/useConnectivity";
 
 type TabType = "pending" | "completed";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface HomeScreenProps {
   navigation?: any;
   route?: {
@@ -68,6 +70,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, route }) => 
   const [bottomNavSelected, setBottomNavSelected] = useState("home");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  const connectivity = useConnectivity();
 
   const fabScale = useRef(new Animated.Value(1)).current;
   const tabPillAnim = useRef(new Animated.Value(0)).current;
@@ -157,7 +161,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, route }) => 
               notificationId,
             );
           }
-        } catch (scheduleError: any) {
+        } catch (scheduleError: unknown) {
           console.warn("Default reminder scheduling failed:", scheduleError);
         }
       }
@@ -225,10 +229,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, route }) => 
             customDate,
           );
           reminderTime = customDate ? customDate.getTime() : Date.now();
-        } catch (scheduleError: any) {
+        } catch (scheduleError: unknown) {
           showToast({
             message:
-              scheduleError?.message || "Cannot set reminder in the past.",
+              (scheduleError instanceof Error ? scheduleError.message : String(scheduleError)) || "Cannot set reminder in the past.",
             type: "warning",
           });
           return;
@@ -355,12 +359,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, route }) => 
               style={styles.iconButton}
               activeOpacity={0.7}
               onPress={() => navigation?.navigate("Profile")}
+              accessibilityLabel="Open profile"
+              accessibilityRole="button"
             >
               <Ionicons name="person-outline" size={20} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </View>
       </View>
+
+      {connectivity.isOffline && (
+        <View
+          style={[
+            styles.offlineBanner,
+            { backgroundColor: theme.warning },
+          ]}
+          accessible={true}
+          accessibilityLabel="You are offline. Some features may be limited."
+        >
+          <Ionicons name="cloud-offline-outline" size={14} color="#FFFFFF" />
+          <Text style={styles.offlineBannerText}>You are offline</Text>
+        </View>
+      )}
 
       <View style={[styles.searchContainer, { backgroundColor: theme.background }]}>
         <View style={[styles.searchBar, { backgroundColor: theme.surface, borderColor: isSearchFocused ? theme.primary : theme.border }]}>
@@ -784,6 +804,19 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 11,
     fontWeight: "800",
+  },
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    gap: 6,
+  },
+  offlineBannerText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "600",
   },
   fabContainer: {
     position: "absolute",

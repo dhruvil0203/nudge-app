@@ -34,3 +34,43 @@ export interface AppState {
   isLoading: boolean;
   error: string | null;
 }
+
+export type Priority = "important" | "normal" | "someday";
+export type LinkStatus = "pending" | "completed";
+export type ThemeMode = "light" | "dark";
+export type ToastType = "success" | "error" | "warning" | "info";
+
+export interface OpenGraphMetadata {
+  title: string | null;
+  description: string | null;
+  image: string | null;
+  domain: string;
+}
+
+export interface NotificationPayload {
+  linkId?: string;
+  url?: string;
+  type?: string;
+}
+
+export interface ProfileData {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ExportData {
+  version: number;
+  exportedAt: number;
+  links: Link[];
+  settings: Record<string, string>;
+  profile: ProfileData | null;
+}
+
+export interface StorageError {
+  code: "PARSE_ERROR" | "CORRUPTED_DATA" | "QUOTA_EXCEEDED" | "UNKNOWN";
+  message: string;
+  originalError?: unknown;
+}

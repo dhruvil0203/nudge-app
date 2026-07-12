@@ -24,7 +24,7 @@ export const useShareSheet = (onSharedUrl?: (url: string) => void) => {
       }
     };
 
-    const sub = Linking.addEventListener("url", handleUrl);
+    const subscription = Linking.addEventListener("url", handleUrl);
 
     Linking.getInitialURL().then((url) => {
       if (url && url !== processedUrlRef.current) {
@@ -34,7 +34,9 @@ export const useShareSheet = (onSharedUrl?: (url: string) => void) => {
       }
     });
 
-    return () => sub.remove();
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   const clearSharedUrl = () => {

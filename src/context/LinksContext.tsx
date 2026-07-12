@@ -7,8 +7,8 @@ import {
   getAllLinks,
   deleteLink as dbDeleteLink,
   clearCompletedLinks as dbClearCompletedLinks,
-  Link,
 } from "../utils/database";
+import type { Link, Priority } from "../types";
 
 interface LinksContextType {
   pendingLinks: Link[];
@@ -16,10 +16,10 @@ interface LinksContextType {
   loading: boolean;
   error: string | null;
   loadLinks: () => Promise<void>;
-  addLink: (url: string, title?: string | null, description?: string | null, image?: string | null, domain?: string | null, priority?: string) => Promise<Link>;
+  addLink: (url: string, title?: string | null, description?: string | null, image?: string | null, domain?: string | null, priority?: Priority) => Promise<Link>;
   updateReminder: (linkId: number, reminderType: string, reminderTime?: number | null, notificationId?: string | null) => Promise<void>;
   markComplete: (linkId: number) => Promise<void>;
-  updatePriority: (linkId: number, priority: string) => Promise<void>;
+  updatePriority: (linkId: number, priority: Priority) => Promise<void>;
   deleteLink: (linkId: number) => Promise<void>;
   clearCompleted: () => Promise<void>;
 }
@@ -64,7 +64,7 @@ export const LinksProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       description: string | null = null,
       image: string | null = null,
       domain: string | null = null,
-      priority: string = "normal",
+      priority: Priority = "normal",
     ) => {
       try {
         setError(null);
@@ -139,7 +139,7 @@ export const LinksProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const updatePriority = useCallback(
-    async (linkId: number, priority: string) => {
+    async (linkId: number, priority: Priority) => {
       try {
         setError(null);
         await dbUpdateLinkPriority(linkId, priority);

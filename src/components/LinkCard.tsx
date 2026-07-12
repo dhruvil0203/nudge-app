@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
-import { Link } from "../utils/database";
+import type { Link } from "../types";
 import { EMPTY_IMAGE } from "../constants";
 import { Ionicons } from "@expo/vector-icons";
 

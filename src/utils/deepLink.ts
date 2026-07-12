@@ -1,13 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Linking } from "react-native";
 
 export const useDeepLink = (onLinkReceived?: (url: string) => void) => {
+  const onLinkReceivedRef = useRef(onLinkReceived);
+  onLinkReceivedRef.current = onLinkReceived;
+
   useEffect(() => {
     const handleDeepLink = ({ url }: { url: string }) => {
       if (url != null) {
         const route = url.replace(/.*?:\/\//g, "");
-        console.log("Deep link received:", route);
-        onLinkReceived?.(route);
+        onLinkReceivedRef.current?.(route);
       }
     };
 
@@ -22,5 +24,5 @@ export const useDeepLink = (onLinkReceived?: (url: string) => void) => {
     return () => {
       subscription.remove();
     };
-  }, [onLinkReceived]);
+  }, []); // Empty deps - uses ref for callback
 };

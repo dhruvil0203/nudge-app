@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useTheme } from "../context/ThemeContext";
-import { Link } from "../utils/database";
+import type { Link } from "../types";
 import { LinkCard } from "./LinkCard";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -117,6 +117,9 @@ export const LinksList: React.FC<LinksListProps> = ({
       maxToRenderPerBatch={10}
       windowSize={7}
       initialNumToRender={8}
+      removeClippedSubviews={true}
+      accessibilityLabel="Links list"
+      accessibilityRole="list"
     />
   );
 };
