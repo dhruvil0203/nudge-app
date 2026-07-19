@@ -31,7 +31,7 @@ A React Native mobile app built with Expo that allows you to save links from any
 
 💾 **Local Storage**
 
-- All data stored locally using expo-sqlite
+- All data stored locally using @react-native-async-storage/async-storage
 - No cloud syncing or external dependencies
 - Complete privacy - your links stay on your device
 
@@ -69,27 +69,38 @@ npx expo start
 Nudge/
 ├── src/
 │   ├── screens/
-│   │   └── HomeScreen.tsx          # Main home screen with tabs
+│   │   ├── HomeScreen.tsx          # Main home screen with tabs
+│   │   ├── ProfileScreen.tsx       # User profile with stats
+│   │   ├── StatsScreen.tsx         # Link statistics & analytics
+│   │   └── SettingsScreen.tsx      # App settings panel
 │   ├── components/
 │   │   ├── LinkCard.tsx            # Individual link card component
 │   │   ├── AddLinkModal.tsx        # Modal for adding new links
 │   │   ├── ReminderPicker.tsx      # Reminder selection interface
-│   │   ├── SettingsModal.tsx       # Settings panel
-│   │   └── LinksList.tsx           # List container for links
+│   │   ├── LinksList.tsx           # List container for links
+│   │   └── UserAvatar.tsx          # Profile avatar component
 │   ├── hooks/
-│   │   └── useLinks.ts             # Custom hook for link management
+│   │   ├── useLinks.ts             # Links state hook
+│   │   └── useConnectivity.ts      # Network connectivity detection
 │   ├── context/
-│   │   └── ThemeContext.tsx        # Theme provider and hook
+│   │   ├── ThemeContext.tsx         # Light/dark theme provider
+│   │   ├── LinksContext.tsx         # Links CRUD state management
+│   │   ├── ProfileContext.tsx       # User profile persistence
+│   │   └── ToastContext.tsx         # Toast & confirm dialogs
 │   ├── utils/
-│   │   ├── database.ts             # SQLite database operations
+│   │   ├── database.ts             # AsyncStorage persistence layer
 │   │   ├── metadata.ts             # Open Graph metadata fetching
 │   │   ├── notifications.ts        # Notification scheduling
-│   │   └── clipboard.ts            # Clipboard utilities
+│   │   ├── clipboard.ts            # Clipboard utilities
+│   │   ├── shareSheet.ts           # Share sheet URL handler
+│   │   └── deepLink.ts             # Deep linking handler
+│   ├── types/
+│   │   └── index.ts                # TypeScript type definitions
 │   └── constants/
 │       ├── theme.ts                # Light and dark theme definitions
 │       └── index.ts                # App constants
 ├── App.tsx                         # Main app entry point
-├── app.json                        # Expo configuration
+├── app.config.js                   # Expo configuration
 ├── package.json                    # Dependencies and scripts
 └── tsconfig.json                   # TypeScript configuration
 ```
@@ -134,11 +145,18 @@ Nudge/
 - **React Native**: Cross-platform mobile development
 - **Expo**: Simplified React Native development
 - **TypeScript**: Type-safe development
-- **expo-sqlite**: Local database storage
+- **AsyncStorage**: Local persistent key-value storage
+- **React Navigation**: Screen navigation (NativeStack + custom bottom tabs)
+- **React Context API**: State management (no Redux)
 - **expo-notifications**: Local push notifications
 - **expo-clipboard**: Clipboard access
+- **expo-linking**: Deep linking & share sheet URL handling
+- **expo-image-picker**: Profile picture selection
+- **react-native-safe-area-context**: Safe area insets handling
+- **react-native-gesture-handler**: Gesture support
+- **react-native-reanimated**: Animation engine
+- **@expo/vector-icons (Ionicons)**: Icon library
 - **axios**: HTTP client for metadata fetching
-- **react-native-receive-sharing-intent**: Share Sheet integration
 
 ## Error Handling & Resilience
 
@@ -153,14 +171,14 @@ The app handles runtime scenarios gracefully to ensure a robust user experience:
 
 ### 📶 Offline-First Design
 Nudge is built to work completely offline without relying on external cloud servers:
-- **Local Database**: All user data, settings, and links are stored locally on the device using `expo-sqlite`.
+- **Local Storage**: All user data, settings, and links are stored locally on the device using `@react-native-async-storage/async-storage`.
 - **Local Notifications**: Reminder scheduling uses `expo-notifications` directly on the operating system level.
 - **Native Sharing**: Share sheet integration connects directly with the native iOS/Android sharing mechanics.
 
 ### ⚡ Performance & Optimization
 - **Optimized Network Fetching**: Open Graph metadata fetching is limited by a 5-second timeout to prevent lag.
 - **Cached Asset Fallbacks**: Fast image loading with local placeholder fallbacks for custom/missing OG images.
-- **Efficient DB Operations**: SQLite queries are optimized and indexed to ensure minimal query latency.
+- **Efficient Storage Operations**: AsyncStorage reads/writes are optimized with a custom `AsyncMutex` to prevent race conditions and ensure data integrity.
 
 ## Future Enhancements
 

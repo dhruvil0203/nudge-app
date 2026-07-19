@@ -14,7 +14,7 @@ module.exports = {
     updates: {
       enabled: true,
       fallbackToCacheTimeout: 10000,
-      url: "https://u.expo.dev/091d3312-7932-4173-9ced-7086e5373f46",
+      url: "https://u.expo.dev/1315efb4-fa50-4593-81d6-013c3f824426",
     },
     assetBundlePatterns: ["**/*"],
     ios: {
@@ -78,7 +78,7 @@ module.exports = {
     ],
     extra: {
       eas: {
-        projectId: "091d3312-7932-4173-9ced-7086e5373f46",
+        projectId: "1315efb4-fa50-4593-81d6-013c3f824426",
       },
     },
     runtimeVersion: {
